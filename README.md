@@ -4,7 +4,7 @@
 
 A modern Fabric mod with quality-of-life features for Hypixel SkyBlock.
 
-[![GitHub Releases](https://img.shields.io/badge/Download-GitHub_Releases-181717?logo=github&logoColor=white)](https://github.com/akinsoft/Skysoft/releases)
+[![Download on Modrinth](https://img.shields.io/badge/Download-Modrinth-00AF5C?logo=modrinth&logoColor=white)](https://modrinth.com/mod/skysoft)
 [![Discord](https://img.shields.io/discord/384340624524050432?label=Discord&logo=discord&logoColor=white&color=5865f2)](https://discord.gg/akin)
 [![License](https://img.shields.io/badge/License-LGPL--3.0-blue)](LICENSE)
 
@@ -128,7 +128,7 @@ Skysoft supports Minecraft 26.1 and 26.2 and requires [Java 25](https://adoptium
 
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for a supported Minecraft version.
 2. Install [Fabric API](https://modrinth.com/mod/fabric-api), [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin), and the [Hypixel Mod API](https://modrinth.com/mod/hypixel-mod-api).
-3. Download the matching Skysoft jar from [GitHub Releases](https://github.com/akinsoft/Skysoft/releases).
+3. Download Skysoft from [Modrinth](https://modrinth.com/mod/skysoft).
 4. Place the mods in your Minecraft `mods` folder and launch the game.
 
 Use `/ss` or `/skysoft` to open the configuration screen. [Mod Menu](https://modrinth.com/mod/modmenu) is supported but optional.
