@@ -19,6 +19,10 @@ import java.nio.file.Path
 class SkysoftConfig(private val saveDisabledReason: String? = null) : Config() {
     @JvmField
     @field:Expose
+    var configMigrationVersion = SkysoftConfigMigrations.CURRENT_CONFIG_MIGRATION_VERSION
+
+    @JvmField
+    @field:Expose
     @field:Category(name = "About", desc = "Information about Skysoft.")
     val about = AboutConfig()
 

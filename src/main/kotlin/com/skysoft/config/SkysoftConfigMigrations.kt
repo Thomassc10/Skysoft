@@ -7,7 +7,13 @@ import com.skysoft.data.ProfileStorage
 import java.util.Locale
 
 internal object SkysoftConfigMigrations {
+    const val CURRENT_CONFIG_MIGRATION_VERSION = 1
+
     fun apply(json: JsonObject, gson: Gson) {
+        val migrationVersion = json.get(CONFIG_MIGRATION_VERSION_FIELD)
+            ?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }
+            ?.asInt
+            ?: 0
         importLegacyStorage(json, gson)
         migratePetsIntoMisc(json)
         migrateBazaarIntoInventory(json)
@@ -16,6 +22,12 @@ internal object SkysoftConfigMigrations {
         migrateRareLootSharingIntoMisc(json)
         migrateBuggedNameplatesIntoMisc(json)
         migrateOrganizedConfigLayout(json)
+        if (migrationVersion < MENU_DROP_FIX_SAFETY_VERSION) {
+            json.getObjectOrNull("fixes")
+                ?.takeIf { it.has(SKYBLOCK_MENU_DROP_FIX_FIELD) }
+                ?.addProperty(SKYBLOCK_MENU_DROP_FIX_FIELD, false)
+        }
+        json.addProperty(CONFIG_MIGRATION_VERSION_FIELD, CURRENT_CONFIG_MIGRATION_VERSION)
     }
 
     private fun importLegacyStorage(json: JsonObject, gson: Gson) {
@@ -301,6 +313,8 @@ internal object SkysoftConfigMigrations {
     private val HOTSPOT_SHARING_DETAILS_FIELDS = listOf("crosshairLine")
     private val BLOCK_OVERLAY_SETTINGS_FIELDS = listOf("color", "combinations")
     private val MISC_FIX_FIELDS = listOf("hideGlitchMobs", "hideBuggedNameplates", "playerHeadSkinFix")
+    private const val CONFIG_MIGRATION_VERSION_FIELD = "configMigrationVersion"
+    private const val MENU_DROP_FIX_SAFETY_VERSION = 1
     private const val SKYBLOCK_MENU_DROP_FIX_FIELD = "preventSkyBlockMenuOpeningOnInventoryDrop"
 }
 

@@ -9,10 +9,10 @@ class FixesConfig {
     @field:Expose
     @field:ConfigOption(
         name = "Menu Drop Fix",
-        desc = "Prevent the SkyBlock Menu from opening when dropping hovered inventory items.",
+        desc = "Prevent the SkyBlock Menu from opening when dropping hovered inventory items.\n§cUse at your own risk.",
     )
     @field:ConfigEditorBoolean
-    var preventSkyBlockMenuOpeningOnInventoryDrop = true
+    var preventSkyBlockMenuOpeningOnInventoryDrop = false
 
     @JvmField
     @field:Expose
