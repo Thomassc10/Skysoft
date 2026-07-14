@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "skysoft",
+  "version": "${version}",
+  "name": "Skysoft",
+  "description": "Hypixel SkyBlock client utilities.",
+  "license": [
+    "LGPL-3.0-only",
+    "LGPL-2.1-only"
+  ],
+  "icon": "assets/skysoft/icon.png",
+  "environment": "client",
+  "contact": {
+    "homepage": "https://modrinth.com/mod/skysoft"
+  },
+  "custom": {
+    "skysoft": {
+      "modrinth_project": "${modrinthProject}",
+      "minecraft_version": "${minecraftRaw}"
+    }
+  },
+  "accessWidener": "skysoft.classtweaker",
+  "mixins": [
+    "skysoft.mixins.json",
+    "skysoft.compat.mixins.json"
+  ],
+  "entrypoints": {
+    "client": [
+      "com.skysoft.SkysoftMod"
+    ],
+    "modmenu": [
+      "com.skysoft.SkysoftModMenu"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${fabricLoader}",
+    "fabric-api": ">=${fabricApi}",
+    "fabric-language-kotlin": ">=${fabricLanguageKotlin}",
+    "hypixel-mod-api": ">=${hypixelModApi}",
+    "minecraft": "${minecraft}",
+    "java": ">=${java}"
+  }
+}

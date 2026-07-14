@@ -1,0 +1,10 @@
+.gradle/
+.idea/
+build/
+versions/*/.gradle/
+versions/*/build/
+versions/*/logs/
+versions/*/run/
+run/
+*.iml
+/.kotlin/sessions

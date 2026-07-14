@@ -1,0 +1,271 @@
+package com.skysoft.features.event.diana
+
+import com.skysoft.config.DianaBurrowBoxColorMode
+import com.skysoft.config.DianaClickCounterPosition
+import com.skysoft.config.DianaBurrowLabelFormat
+import com.skysoft.config.DianaDetailsConfig
+import com.skysoft.utils.ColorUtilities.COLOR_CHANNEL_MAX
+import com.skysoft.utils.ColorUtilities.COLOR_CHANNEL_MIN
+import com.skysoft.utils.ColorUtilities.toColor
+import com.skysoft.utils.WorldVec
+import com.skysoft.utils.render.BlockHighlightRenderer
+import com.skysoft.utils.render.SkysoftRenderContext
+import com.skysoft.utils.render.WorldLabelPart
+import com.skysoft.utils.render.WorldLabelRenderer
+import com.skysoft.utils.render.WorldLabelStyle
+import com.skysoft.utils.render.WorldLineRenderer
+import net.minecraft.ChatFormatting
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.TextColor
+import java.awt.Color
+import kotlin.math.roundToInt
+
+internal object DianaBurrowRenderer {
+    fun renderWorld(
+        context: SkysoftRenderContext,
+        targets: Collection<DianaBurrowTarget>,
+        currentTarget: DianaBurrowTarget,
+        drawCrosshairLine: Boolean,
+        boldLabels: Boolean,
+        labelFormat: DianaBurrowLabelFormat,
+        boxStyle: DianaBurrowBoxStyle,
+        showClickCounter: Boolean,
+        clickCounterPosition: DianaClickCounterPosition,
+        visualAlphaScale: Double = 1.0,
+    ) {
+        targets.forEach { target ->
+            if (target != currentTarget) {
+                renderTarget(
+                    context,
+                    target,
+                    boldLabels,
+                    labelFormat,
+                    boxStyle,
+                    showClickCounter,
+                    clickCounterPosition,
+                    visualAlphaScale,
+                )
+            }
+        }
+        renderTarget(
+            context,
+            currentTarget,
+            boldLabels,
+            labelFormat,
+            boxStyle,
+            showClickCounter,
+            clickCounterPosition,
+            visualAlphaScale,
+        )
+        if (drawCrosshairLine) {
+            val currentTargetType = DianaBurrowInteractions.clickProgress(currentTarget)?.displayType
+                ?: currentTarget.type
+            WorldLineRenderer.drawToCrosshair(
+                context,
+                currentTarget.location.blockCenter(),
+                currentTargetType.outlineColor,
+                currentTargetType.lineWidth,
+            )
+        }
+    }
+
+    private fun renderTarget(
+        context: SkysoftRenderContext,
+        target: DianaBurrowTarget,
+        boldLabels: Boolean,
+        labelFormat: DianaBurrowLabelFormat,
+        boxStyle: DianaBurrowBoxStyle,
+        showClickCounter: Boolean,
+        clickCounterPosition: DianaClickCounterPosition,
+        visualAlphaScale: Double,
+    ) {
+        val clickProgress = DianaBurrowInteractions.clickProgress(target)
+        val displayType = clickProgress?.displayType ?: target.type
+        val boxColors = boxStyle.colorsFor(displayType, visualAlphaScale)
+        BlockHighlightRenderer.drawBlock(
+            context,
+            target.location,
+            boxColors.outline,
+            boxColors.fill,
+            displayType.lineWidth,
+        )
+        renderLabel(
+            context,
+            target,
+            displayType,
+            boldLabels,
+            labelFormat,
+            clickProgress.takeIf { showClickCounter },
+            clickCounterPosition,
+            visualAlphaScale,
+        )
+    }
+
+    private fun renderLabel(
+        context: SkysoftRenderContext,
+        target: DianaBurrowTarget,
+        displayType: DianaBurrowType,
+        boldLabels: Boolean,
+        labelFormat: DianaBurrowLabelFormat,
+        clickProgress: DianaBurrowClickProgress?,
+        clickCounterPosition: DianaClickCounterPosition,
+        visualAlphaScale: Double,
+    ) {
+        val label = displayType.labelComponent(boldLabels, labelFormat, visualAlphaScale)
+        val anchor = target.location + LABEL_OFFSET
+        val style = LABEL_STYLE.withAlpha(visualAlphaScale)
+        if (clickProgress == null) {
+            WorldLabelRenderer.draw(context, anchor, listOf(label), style)
+            return
+        }
+
+        val progress = progressComponent(clickProgress, visualAlphaScale)
+        WorldLabelRenderer.drawParts(context, anchor, labelParts(label, progress, clickCounterPosition), style)
+    }
+
+    private fun DianaBurrowType.labelComponent(
+        boldLabels: Boolean,
+        labelFormat: DianaBurrowLabelFormat,
+        visualAlphaScale: Double,
+    ): Component {
+        val textAlpha = textAlpha(visualAlphaScale)
+        return LABEL_CACHE.getOrPut(LabelKey(this, boldLabels, labelFormat, textAlpha)) {
+            val text = labelFormat.format(label)
+            if (textAlpha == FULL_TEXT_ALPHA && boldLabels) {
+                Component.literal(text).withStyle(chatColor, ChatFormatting.BOLD)
+            } else if (textAlpha == FULL_TEXT_ALPHA) {
+                Component.literal(text).withStyle(chatColor)
+            } else {
+                Component.literal(text).withStyle { style ->
+                    val colored = style.withColor(TextColor.fromRgb(chatColor.withAlpha(textAlpha)))
+                    if (boldLabels) colored.withBold(true) else colored
+                }
+            }
+        }
+    }
+
+    private fun progressComponent(clickProgress: DianaBurrowClickProgress, visualAlphaScale: Double): Component {
+        val textAlpha = textAlpha(visualAlphaScale)
+        return PROGRESS_CACHE.getOrPut(ProgressKey(clickProgress.label, textAlpha)) {
+            if (textAlpha == FULL_TEXT_ALPHA) {
+                Component.literal(clickProgress.label).withStyle(ChatFormatting.AQUA)
+            } else {
+                Component.literal(clickProgress.label).withStyle { style ->
+                    style.withColor(TextColor.fromRgb(ChatFormatting.AQUA.withAlpha(textAlpha)))
+                }
+            }
+        }
+    }
+
+    private fun labelParts(
+        label: Component,
+        progress: Component,
+        clickCounterPosition: DianaClickCounterPosition,
+    ): List<WorldLabelPart> =
+        when (clickCounterPosition) {
+            DianaClickCounterPosition.RIGHT -> rightProgressParts(label, progress)
+            DianaClickCounterPosition.BELOW -> belowProgressParts(label, progress)
+        }
+
+    private fun rightProgressParts(label: Component, progress: Component): List<WorldLabelPart> {
+        val font = Minecraft.getInstance().font
+        val labelWidth = font.width(label).toFloat()
+        val progressWidth = font.width(progress).toFloat()
+        val totalWidth = labelWidth + PROGRESS_GAP + progressWidth
+        val labelX = -totalWidth / 2
+        val labelY = -LABEL_STYLE.lineHeight.toFloat() / 2
+        return listOf(
+            WorldLabelPart(label, labelX, labelY),
+            WorldLabelPart(
+                progress,
+                labelX + labelWidth + PROGRESS_GAP,
+                labelY,
+            ),
+        )
+    }
+
+    private fun belowProgressParts(label: Component, progress: Component): List<WorldLabelPart> {
+        val font = Minecraft.getInstance().font
+        val labelWidth = font.width(label).toFloat()
+        val progressWidth = font.width(progress).toFloat()
+        val lineHeight = LABEL_STYLE.lineHeight.toFloat()
+        val totalHeight = lineHeight * 2
+        val labelY = -totalHeight / 2
+        return listOf(
+            WorldLabelPart(label, -labelWidth / 2, labelY),
+            WorldLabelPart(progress, -progressWidth / 2, labelY + lineHeight),
+        )
+    }
+
+    private fun WorldLabelStyle.withAlpha(visualAlphaScale: Double): WorldLabelStyle =
+        copy(textColor = WHITE_RGB.withAlpha(textAlpha(visualAlphaScale)))
+
+    private fun ChatFormatting.withAlpha(alpha: Int): Int =
+        (
+            (alpha.coerceIn(0, FULL_TEXT_ALPHA) shl ALPHA_SHIFT) or
+                ((TextColor.fromLegacyFormat(this)?.value ?: WHITE_RGB) and RGB_MASK)
+            )
+
+    private fun Int.withAlpha(alpha: Int): Int =
+        ((alpha.coerceIn(0, FULL_TEXT_ALPHA) shl ALPHA_SHIFT) or (this and RGB_MASK))
+
+    private fun textAlpha(visualAlphaScale: Double): Int =
+        (FULL_TEXT_ALPHA * visualAlphaScale).roundToInt().coerceIn(0, FULL_TEXT_ALPHA)
+
+    private val LABEL_OFFSET = WorldVec(0.5, 1.8, 0.5)
+    private val LABEL_STYLE = WorldLabelStyle(maxRenderDistance = 80.0, maxScale = 7.0)
+    private const val PROGRESS_GAP = 3f
+    private const val FULL_TEXT_ALPHA = 255
+    private const val ALPHA_SHIFT = 24
+    private const val RGB_MASK = 0xFFFFFF
+    private const val WHITE_RGB = 0xFFFFFF
+    private val LABEL_CACHE = mutableMapOf<LabelKey, Component>()
+    private val PROGRESS_CACHE = mutableMapOf<ProgressKey, Component>()
+
+    private data class LabelKey(
+        val type: DianaBurrowType,
+        val boldLabels: Boolean,
+        val labelFormat: DianaBurrowLabelFormat,
+        val textAlpha: Int,
+    )
+
+    private data class ProgressKey(
+        val label: String,
+        val textAlpha: Int,
+    )
+}
+
+internal class DianaBurrowBoxStyle(private val customColor: Color?) {
+    fun colorsFor(type: DianaBurrowType, visualAlphaScale: Double = 1.0): DianaBurrowBoxColors {
+        val color = customColor ?: return DianaBurrowBoxColors(
+            type.outlineColor.withScaledAlpha(visualAlphaScale),
+            type.fillColor.withScaledAlpha(visualAlphaScale),
+        )
+        return DianaBurrowBoxColors(
+            color.withScaledAlpha(visualAlphaScale),
+            color.withScaledAlpha(CUSTOM_FILL_ALPHA_SCALE * visualAlphaScale),
+        )
+    }
+
+    private fun Color.withScaledAlpha(scale: Double): Color =
+        Color(red, green, blue, (alpha * scale).roundToInt().coerceIn(COLOR_CHANNEL_MIN, COLOR_CHANNEL_MAX))
+
+    private companion object {
+        const val CUSTOM_FILL_ALPHA_SCALE = 0.25
+    }
+}
+
+internal data class DianaBurrowBoxColors(
+    val outline: Color,
+    val fill: Color,
+)
+
+internal fun DianaDetailsConfig.burrowBoxStyle(): DianaBurrowBoxStyle =
+    DianaBurrowBoxStyle(
+        customColor = if (burrowBoxColorMode == DianaBurrowBoxColorMode.CUSTOM) {
+            burrowBoxColor.get().toColor()
+        } else {
+            null
+        },
+    )

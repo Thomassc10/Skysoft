@@ -1,0 +1,254 @@
+package com.skysoft.features.inventory
+
+import com.skysoft.data.ProfileStorage
+import com.skysoft.utils.gui.Point
+import com.skysoft.utils.gui.Rect
+import com.skysoft.utils.gui.nonPlayerSlots
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.inventory.ContainerScreen
+import net.minecraft.world.inventory.Slot
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Blocks
+
+internal fun measurements(width: Int, height: Int): Measurements {
+    val columns = config.details.columns.coerceIn(
+        1,
+        maxOf(1, (width - StoragePanel.PADDING * 2) / (StoragePages.WIDTH + StoragePages.PADDING)),
+    )
+    val scrollPanelWidth = columns * StoragePages.WIDTH + (columns - 1) * StoragePages.PADDING
+    val storageWidth = scrollPanelWidth + StorageScrollbar.GAP + StorageScrollbar.WIDTH + StoragePanel.PADDING * 2
+    val playerX = width / 2 - StoragePlayerInventory.WIDTH / 2
+    val sideSelectorX = (playerX - StorageSelector.WIDTH - StorageSelector.SIDE_GAP)
+        .takeIf { it >= StoragePanel.EDGE_MARGIN }
+        ?: (playerX + StoragePlayerInventory.WIDTH + StorageSelector.SIDE_GAP)
+            .takeIf { it + StorageSelector.WIDTH <= width - StoragePanel.EDGE_MARGIN }
+    val stackedSelectorHeight = if (config.settings.miniMenu && sideSelectorX == null) {
+        StorageSelector.HEIGHT + StorageSelector.STACKED_GAP
+    } else {
+        0
+    }
+    val storageHeight = config.details.height.coerceIn(
+        StoragePanel.MIN_HEIGHT,
+        maxOf(
+            StoragePanel.MIN_HEIGHT,
+            height -
+                StoragePlayerInventory.HEIGHT -
+                StorageSearch.HEIGHT -
+                StoragePanel.VERTICAL_RESERVED_SPACE -
+                stackedSelectorHeight,
+        ),
+    )
+    val storageX = (width - storageWidth) / 2
+    val availableHeight = height -
+        storageHeight -
+        StoragePlayerInventory.HEIGHT -
+        StorageSearch.HEIGHT -
+        StoragePanel.PADDING -
+        stackedSelectorHeight
+    val storageTop = (availableHeight / 2).coerceAtLeast(StoragePanel.TOP_MIN)
+    val scrollPanel = Rect(
+        storageX + StoragePanel.PADDING,
+        storageTop + StoragePanel.PADDING,
+        scrollPanelWidth,
+        storageHeight - StoragePanel.PADDING * 2,
+    )
+    val playerY = storageTop + storageHeight + StorageSearch.HEIGHT + StorageSearch.GAP
+    val search = Rect(
+        playerX,
+        storageTop + storageHeight + StorageSearch.GAP,
+        StoragePlayerInventory.WIDTH,
+        StorageSearch.HEIGHT,
+    )
+    val selectorX = sideSelectorX ?: ((width - StorageSelector.WIDTH) / 2).coerceAtLeast(StoragePanel.EDGE_MARGIN)
+    val selectorY = if (stackedSelectorHeight > 0) {
+        playerY + StoragePlayerInventory.HEIGHT + StorageSelector.STACKED_GAP
+    } else {
+        search.y + (
+            StorageSearch.HEIGHT +
+                StorageSearch.GAP +
+                StoragePlayerInventory.HEIGHT -
+                StorageSelector.HEIGHT
+            ).coerceAtLeast(0) / 2
+    }
+    val totalBounds = Rect(
+        storageX,
+        storageTop,
+        storageWidth,
+        storageHeight +
+            StorageSearch.HEIGHT +
+            StoragePlayerInventory.HEIGHT +
+            StoragePanel.PADDING +
+            stackedSelectorHeight,
+    )
+    return Measurements(
+        storageX = storageX,
+        storageY = storageTop,
+        storageWidth = storageWidth,
+        storageHeight = storageHeight,
+        scrollPanel = scrollPanel,
+        scrollbar = Rect(
+            scrollPanel.x + scrollPanel.width + StorageScrollbar.GAP,
+            scrollPanel.y,
+            StorageScrollbar.WIDTH,
+            scrollPanel.height,
+        ),
+        search = search,
+        playerBounds = Rect(playerX, playerY, StoragePlayerInventory.WIDTH, StoragePlayerInventory.HEIGHT),
+        selectorBounds = Rect(selectorX, selectorY, StorageSelector.WIDTH, StorageSelector.HEIGHT),
+        totalBounds = totalBounds,
+        columns = columns,
+    )
+}
+
+internal fun pageLayouts(measurements: Measurements, activePage: Int?): PageLayoutResult {
+    val layouts = linkedMapOf<Int, PageLayout>()
+    var xIndex = 0
+    var y = measurements.scrollPanel.y - scroll
+    var rowHeight = 0
+    var completedRowHeight = 0
+    for ((pageIndex, page) in displayStorageEntries()) {
+        if (
+            ToolkitType.fromPageIndex(pageIndex) == null &&
+            pageIndex !in 0 until ProfileStorage.SKYBLOCK_STORAGE_PAGE_COUNT
+        ) {
+            continue
+        }
+        if (pageIndex != activePage && !page.matchesSearch()) continue
+        page.repairLoadedValues()
+        val pageHeight = pageHeight(page)
+        val x = measurements.scrollPanel.x + xIndex * (StoragePages.WIDTH + StoragePages.PADDING)
+        layouts[pageIndex] = PageLayout(pageIndex, x, y, StoragePages.WIDTH, pageHeight)
+        rowHeight = maxOf(rowHeight, pageHeight)
+        xIndex++
+        if (xIndex >= measurements.columns) {
+            completedRowHeight = rowHeight
+            y += rowHeight + StoragePages.PADDING
+            xIndex = 0
+            rowHeight = 0
+        }
+    }
+    val contentBottom = if (xIndex == 0) {
+        y + scroll - measurements.scrollPanel.y
+    } else {
+        y + rowHeight + scroll - measurements.scrollPanel.y
+    }.coerceAtLeast(0)
+    val finalRowHeight = if (xIndex == 0) completedRowHeight else rowHeight
+    val focusPadding = if (contentBottom > 0) {
+        (measurements.scrollPanel.height - finalRowHeight).coerceAtLeast(0) / 2
+    } else {
+        0
+    }
+    val contentHeight = contentBottom + focusPadding
+    return PageLayoutResult(layouts, contentHeight)
+}
+
+internal fun selectorSlotAt(measurements: Measurements, mouseX: Int, mouseY: Int): Int? {
+    if (!measurements.selectorBounds.contains(mouseX, mouseY)) return null
+    for (slot in 0 until StorageSelector.COLUMNS * StorageSelector.ROWS) {
+        val pos = selectorSlotPosition(measurements, slot)
+        if (selectorSlotBounds(pos).contains(mouseX, mouseY)) {
+            return slot
+        }
+    }
+    return null
+}
+
+internal fun selectorPageAt(measurements: Measurements, mouseX: Int, mouseY: Int): Int? {
+    if (!measurements.selectorBounds.contains(mouseX, mouseY)) return null
+    for (pageIndex in 0 until ProfileStorage.SKYBLOCK_STORAGE_PAGE_COUNT) {
+        val pos = selectorPagePosition(measurements, pageIndex)
+        if (selectorSlotBounds(pos).contains(mouseX, mouseY)) {
+            return pageIndex.takeIf { it in storage.skyBlockStoragePages }
+        }
+    }
+    for (type in ToolkitType.entries) {
+        val pos = selectorToolkitPosition(measurements, type)
+        if (selectorSlotBounds(pos).contains(mouseX, mouseY)) {
+            return type.pageIndex
+        }
+    }
+    return null
+}
+
+internal fun selectorPagePosition(measurements: Measurements, pageIndex: Int): Point =
+    selectorSlotPosition(measurements, pageIndex)
+
+internal fun selectorToolkitPosition(measurements: Measurements, type: ToolkitType): Point =
+    selectorSlotPosition(measurements, type.selectorSlot)
+
+internal fun selectorSlotPosition(measurements: Measurements, slot: Int): Point =
+    Point(
+        measurements.selectorBounds.x +
+            StorageSelector.SLOT_OFFSET_X +
+            (slot % StorageSelector.COLUMNS) * StorageSelector.SLOT_SIZE,
+        measurements.selectorBounds.y +
+            StorageSelector.SLOT_OFFSET_Y +
+            (slot / StorageSelector.COLUMNS) * StorageSelector.SLOT_SIZE,
+    )
+
+internal fun selectorSlotBounds(pos: Point): Rect =
+    Rect(pos.x - 1, pos.y - 1, StorageSelector.SLOT_SIZE, StorageSelector.SLOT_SIZE)
+
+internal fun selectorIconStack(pageIndex: Int, page: ProfileStorage.SkyBlockStoragePageData?): ItemStack {
+    if (page != null && page.overviewIcon.isNotBlank()) {
+        val stack = stackFor(ProfileStorage.SkyBlockStorageItemData(page.overviewIcon))
+        if (!stack.isEmpty) return stack
+    }
+    emptyOverviewStacks[pageIndex]?.let { return it }
+    if (page == null) return ItemStack.EMPTY
+    return if (pageIndex < ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES) {
+        ItemStack(Blocks.ENDER_CHEST.asItem())
+    } else {
+        ItemStack(Blocks.CHEST.asItem())
+    }
+}
+
+internal fun playerSlotPosition(measurements: Measurements, slot: Int): Point =
+    if (slot in 0 until StoragePlayerInventory.HOTBAR_SLOT_COUNT) {
+        Point(
+            measurements.playerBounds.x + StoragePlayerInventory.SLOT_X_OFFSET + slot * StorageSlots.SIZE,
+            measurements.playerBounds.y + StoragePlayerInventory.HOTBAR_Y_OFFSET,
+        )
+    } else {
+        val inventorySlot = slot - StoragePlayerInventory.HOTBAR_SLOT_COUNT
+        Point(
+            measurements.playerBounds.x +
+                StoragePlayerInventory.SLOT_X_OFFSET +
+                (inventorySlot % StoragePages.COLUMNS) * StorageSlots.SIZE,
+            measurements.playerBounds.y +
+                StoragePlayerInventory.INVENTORY_Y_OFFSET +
+                (inventorySlot / StoragePages.COLUMNS) * StorageSlots.SIZE,
+        )
+    }
+
+internal fun pageSlotX(layout: PageLayout, slot: Int): Int =
+    layout.x + StoragePages.SLOT_X_OFFSET + (slot % StoragePages.COLUMNS) * StorageSlots.SIZE
+
+internal fun pageSlotY(layout: PageLayout, slot: Int): Int =
+    layout.y +
+        Minecraft.getInstance().font.lineHeight +
+        StoragePages.TITLE_SLOT_GAP +
+        (slot / StoragePages.COLUMNS) * StorageSlots.SIZE
+
+internal fun pageSlotPosition(
+    measurements: Measurements,
+    handle: StorageHandle,
+    layout: PageLayout?,
+    slot: Slot,
+): Point? {
+    val rows = handle.gridRows()?.coerceAtLeast(0) ?: return null
+    val pageSlot = slot.containerSlot - handle.slotOffset()
+    if (layout == null || pageSlot !in 0 until rows * StoragePages.COLUMNS) return null
+    val x = pageSlotX(layout, pageSlot)
+    val y = pageSlotY(layout, pageSlot)
+    if (!slotInside(measurements.scrollPanel, x, y)) return null
+    return Point(x, y)
+}
+
+internal fun activePageStacks(screen: ContainerScreen, handle: StorageHandle): Map<Int, ItemStack> =
+    screen.nonPlayerSlots()
+        .mapNotNull { slot ->
+            val pageSlot = slot.containerSlot - handle.slotOffset()
+            if (pageSlot < 0) null else pageSlot to slot.item
+        }
+        .toMap()

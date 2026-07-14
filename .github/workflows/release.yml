@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skysoft-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Check release status
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          project_version="$(awk -F= '$1 == "skysoft.version" { print $2 }' gradle.properties)"
+          if [[ ! "${project_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::skysoft.version is missing or invalid: ${project_version}"
+            exit 1
+          fi
+          tag="v${project_version}"
+          echo "version=${project_version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+            echo "Release ${tag} already exists; nothing to publish"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+            echo "Release ${tag} does not exist; preparing publication"
+            if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+              tag_commit="$(git rev-list -n 1 "${tag}")"
+              if [[ "${tag_commit}" != "${GITHUB_SHA}" ]]; then
+                echo "::error::Tag ${tag} already points to ${tag_commit}, not ${GITHUB_SHA}"
+                exit 1
+              fi
+            fi
+          fi
+
+      - name: Set up Java 25
+        if: steps.release.outputs.exists == 'false'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        if: steps.release.outputs.exists == 'false'
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build release
+        if: steps.release.outputs.exists == 'false'
+        run: ./gradlew build collectReleaseJars
+
+      - name: Verify release assets
+        if: steps.release.outputs.exists == 'false'
+        env:
+          PROJECT_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          assets=(build/release-assets/*.jar)
+          supported_versions="$(awk -F= '$1 == "skysoft.supportedMinecraftVersions" { print $2 }' gradle.properties)"
+          IFS=',' read -ra minecraft_versions <<< "${supported_versions}"
+          if (( ${#assets[@]} != ${#minecraft_versions[@]} )); then
+            echo "::error::Expected ${#minecraft_versions[@]} release jars, found ${#assets[@]}"
+            exit 1
+          fi
+          for raw_version in "${minecraft_versions[@]}"; do
+            minecraft_version="${raw_version//[[:space:]]/}"
+            asset="build/release-assets/Skysoft-${PROJECT_VERSION}-mc${minecraft_version}.jar"
+            if [[ ! -f "${asset}" ]]; then
+              echo "::error::Missing release jar for Minecraft ${minecraft_version}: ${asset}"
+              exit 1
+            fi
+          done
+
+      - name: Publish GitHub release
+        if: steps.release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          supported_versions="$(awk -F= '$1 == "skysoft.supportedMinecraftVersions" { print $2 }' gradle.properties)"
+          IFS=',' read -ra minecraft_versions <<< "${supported_versions}"
+          release_notes=$'## Minecraft versions\n\n'
+          for raw_version in "${minecraft_versions[@]}"; do
+            minecraft_version="${raw_version//[[:space:]]/}"
+            asset="Skysoft-${PROJECT_VERSION}-mc${minecraft_version}.jar"
+            release_notes+="- Minecraft ${minecraft_version}: \`${asset}\`"$'\n'
+          done
+          gh release create "${RELEASE_TAG}" build/release-assets/*.jar \
+            --target "${GITHUB_SHA}" \
+            --generate-notes \
+            --notes "${release_notes}" \
+            --title "Skysoft ${PROJECT_VERSION}"
