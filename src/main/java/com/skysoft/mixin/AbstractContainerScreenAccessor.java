@@ -26,6 +26,9 @@ public interface AbstractContainerScreenAccessor {
     @Accessor("skipNextRelease")
     void skysoft$setSkipNextRelease(boolean skipNextRelease);
 
+    @Accessor("hoveredSlot")
+    Slot skysoft$getHoveredSlot();
+
     @Accessor("SLOT_HIGHLIGHT_BACK_SPRITE")
     static Identifier skysoft$getSlotHighlightBackSprite() {
         throw new AssertionError();

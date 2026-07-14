@@ -8,6 +8,7 @@ import com.skysoft.features.inventory.InventoryEquipment;
 import com.skysoft.features.inventory.InventoryDropSelectionGuard;
 import com.skysoft.features.inventory.SkyBlockMenuInventoryDropFix;
 import com.skysoft.features.inventory.SlotBindingManager;
+import com.skysoft.features.inventory.SlotLockManager;
 import com.skysoft.features.inventory.SmoothSwapping;
 import com.skysoft.features.inventory.StorageOverlayController;
 import com.skysoft.features.inventory.itemlist.ItemListController;
@@ -53,6 +54,7 @@ public class AbstractContainerScreenMixin {
         float delta,
         CallbackInfo ci
     ) {
+        SlotLockManager.beginFrame();
         SmoothSwapping.beginFrame((AbstractContainerScreen<?>) (Object) this);
         InventoryEquipment.renderBackground((AbstractContainerScreen<?>) (Object) this, context);
     }
@@ -91,6 +93,7 @@ public class AbstractContainerScreenMixin {
     @Inject(method = "removed", at = @At("TAIL"))
     private void skysoft$restoreInventoryEquipmentLayout(CallbackInfo ci) {
         InventoryEquipment.restoreScreen((AbstractContainerScreen<?>) (Object) this);
+        SlotLockManager.clearInputState();
     }
 
     @Inject(method = "extractTooltip", at = @At("HEAD"), cancellable = true)
@@ -184,6 +187,22 @@ public class AbstractContainerScreenMixin {
     }
 
     @WrapOperation(
+        method = "mouseDragged",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;shouldAddSlotToQuickCraft(Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/world/item/ItemStack;)Z"
+        )
+    )
+    private boolean skysoft$skipLockedQuickCraftSlot(
+        AbstractContainerScreen<?> screen,
+        Slot slot,
+        ItemStack stack,
+        Operation<Boolean> original
+    ) {
+        return SlotLockManager.canQuickCraftInto(slot) && original.call(screen, slot, stack);
+    }
+
+    @WrapOperation(
         method = "mouseReleased",
         at = @At(
             value = "INVOKE",
@@ -236,6 +255,10 @@ public class AbstractContainerScreenMixin {
             return;
         }
         if (StorageOverlayController.handleKeyPress((AbstractContainerScreen<?>) (Object) this, event) == InputHandlingResult.CONSUMED) {
+            cir.setReturnValue(true);
+            return;
+        }
+        if (SlotLockManager.handleKeyPress((AbstractContainerScreen<?>) (Object) this, event) == InputHandlingResult.CONSUMED) {
             cir.setReturnValue(true);
         }
     }
@@ -303,6 +326,7 @@ public class AbstractContainerScreenMixin {
     ) {
         ActivePetHighlighter.renderOutline((AbstractContainerScreen<?>) (Object) this, context, slot);
         BazaarTracker.renderSlotIndicatorOverlay((AbstractContainerScreen<?>) (Object) this, context, slot);
+        SlotLockManager.renderSlotOverlay(context, slot);
     }
 
     @Inject(method = "extractSlot", at = @At("HEAD"))
@@ -401,6 +425,12 @@ public class AbstractContainerScreenMixin {
 
     @Inject(method = "slotClicked", at = @At("HEAD"), cancellable = true)
     private void skysoft$slotClicked(Slot slot, int slotId, int button, ContainerInput action, CallbackInfo ci) {
+        if (SlotLockManager.handleSlotClick((AbstractContainerScreen<?>) (Object) this, slot, button, action)
+            == InputHandlingResult.CONSUMED
+        ) {
+            ci.cancel();
+            return;
+        }
         PetStorageService.onSlotClick(slot, slotId, button);
         if (SlotBindingManager.handleSlotClick((AbstractContainerScreen<?>) (Object) this, slot, action)
             == InputHandlingResult.CONSUMED

@@ -137,6 +137,7 @@ data class ProfileStorage(
         @Expose val skillData: MutableMap<SkyBlockSkill, SkillExpGainApi.SkillInfo> = mutableMapOf(),
         @Expose val attributeShards: MutableMap<String, AttributeShardData> = mutableMapOf(),
         @Expose val slotBindings: MutableList<SlotBindingData> = mutableListOf(),
+        @Expose val slotLocks: MutableList<Int> = mutableListOf(),
         @Expose val bazaarTracker: BazaarTrackerData = BazaarTrackerData(),
         @Expose val dianaBurrowCache: DianaBurrowCacheData = DianaBurrowCacheData(),
         @Expose val dianaBurrowChain: DianaBurrowChainData = DianaBurrowChainData(),
@@ -154,6 +155,7 @@ data class ProfileStorage(
             }
             repairInventoryEquipment()
             repairSlotBindings()
+            repairSlotLocks()
             bazaarTracker.repairLoadedValues()
             dianaBurrowCache.repairLoadedValues()
             dianaBurrowChain.repairLoadedValues()
@@ -176,6 +178,12 @@ data class ProfileStorage(
                 usedSlots += binding.firstSlot
                 usedSlots += binding.secondSlot
             }
+        }
+
+        private fun repairSlotLocks() {
+            val repaired = slotLocks.filter { it in PLAYER_INVENTORY_SLOT_RANGE }.distinct().sorted()
+            slotLocks.clear()
+            slotLocks.addAll(repaired)
         }
     }
 
@@ -442,6 +450,7 @@ data class ProfileStorage(
         const val SLOTS_PER_STORAGE_ROW = 9
         const val SKYBLOCK_STORAGE_MAX_ROWS = SKYBLOCK_CONTAINER_MAX_ROWS
         const val INVENTORY_EQUIPMENT_SLOT_COUNT = 4
+        private val PLAYER_INVENTORY_SLOT_RANGE = 0..40
         val SKYBLOCK_TOOLKIT_KEYS = setOf("farming", "hunting")
     }
 }

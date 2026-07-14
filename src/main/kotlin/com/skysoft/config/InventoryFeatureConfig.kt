@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 import com.skysoft.config.core.HudPosition
 import com.skysoft.features.inventory.InventoryButtonEditorScreen
 import com.skysoft.features.inventory.SlotBindingManager
+import com.skysoft.features.inventory.SlotLockManager
 import io.github.notenoughupdates.moulconfig.ChromaColour
 import io.github.notenoughupdates.moulconfig.annotations.Accordion
 import io.github.notenoughupdates.moulconfig.annotations.Category
@@ -74,6 +75,11 @@ class InventoryFeatureConfig {
     @field:Expose
     @field:Category(name = "Slot Bindings", desc = "Bind inventory slots together and shift-click either slot to swap them.")
     val slotBindings = SlotBindingsConfig()
+
+    @JvmField
+    @field:Expose
+    @field:Category(name = "Slot Locking", desc = "Protect inventory slots from item movement and drops.")
+    val slotLocking = SlotLockingConfig()
 
     @JvmField
     @field:Expose
@@ -373,6 +379,36 @@ class SlotBindingsDetailsConfig {
     )
     @field:ConfigEditorBoolean
     var showShiftHoverHighlight = true
+}
+
+class SlotLockingConfig {
+    @JvmField
+    @field:Expose
+    @field:ConfigOption(name = "Enabled", desc = "Protect locked inventory slots.")
+    @field:ConfigEditorBoolean
+    var enabled = true
+
+    @JvmField
+    @field:Expose
+    @field:ConfigOption(name = "Settings", desc = "Slot locking controls.")
+    @field:Accordion
+    val settings = SlotLockingSettingsConfig()
+
+    val lockKey: Int
+        get() = settings.lockKey
+}
+
+class SlotLockingSettingsConfig {
+    @JvmField
+    @field:Expose
+    @field:ConfigOption(name = "Lock Key", desc = "Press this key while hovering an inventory slot to lock or unlock it.")
+    @field:ConfigEditorKeybind(defaultKey = GLFW.GLFW_KEY_L)
+    var lockKey = GLFW.GLFW_KEY_L
+
+    @JvmField
+    @field:ConfigOption(name = "Reset All Locks", desc = "Unlock every inventory slot on the current SkyBlock profile.")
+    @field:ConfigEditorButton(buttonText = "Reset")
+    val resetAllLocks = Runnable { SlotLockManager.resetAllLocks() }
 }
 
 enum class SlotBindingHighlightStyle(private val displayName: String) {
