@@ -10,6 +10,7 @@ import com.skysoft.data.ProfileStorage
 import io.github.notenoughupdates.moulconfig.ChromaColour
 import io.github.notenoughupdates.moulconfig.Config
 import io.github.notenoughupdates.moulconfig.LegacyStringChromaColourTypeAdapter
+import io.github.notenoughupdates.moulconfig.Social
 import io.github.notenoughupdates.moulconfig.annotations.Category
 import io.github.notenoughupdates.moulconfig.common.text.StructuredText
 import io.github.notenoughupdates.moulconfig.observer.PropertyTypeAdapterFactory
@@ -76,6 +77,8 @@ class SkysoftConfig(private val saveDisabledReason: String? = null) : Config() {
 
     override fun getTitle(): StructuredText =
         StructuredText.of("Skysoft ${SkysoftMod.VERSION} by §cAkinsoft§r, config by §5Moulberry §rand §5nea89")
+
+    override fun getSocials(): List<Social> = SkysoftSocialLink.headerLinks
 
     override fun saveNow() {
         try {

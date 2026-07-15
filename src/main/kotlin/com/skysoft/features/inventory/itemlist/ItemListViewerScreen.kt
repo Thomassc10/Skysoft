@@ -16,13 +16,13 @@ import com.skysoft.data.skyblock.recipeIngredientStack
 import com.skysoft.data.skyblock.price.BazaarDataConsumer
 import com.skysoft.data.skyblock.price.SkyBlockPriceData
 import com.skysoft.gui.tooltip.SkysoftNativeTooltip
+import com.skysoft.utils.BrowserUtilities
 import com.skysoft.utils.MinecraftClient
 import com.skysoft.utils.SoundUtilities
 import com.skysoft.utils.gui.OverlayPanelStyle
 import com.skysoft.utils.gui.PixelButtonRenderer
 import com.skysoft.utils.gui.Rect
 import com.skysoft.utils.render.LegacyTextRenderer
-import java.net.URI
 import kotlin.math.min
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
@@ -32,7 +32,6 @@ import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
-import net.minecraft.util.Util
 import org.lwjgl.glfw.GLFW
 
 internal class ItemListViewerScreen(
@@ -905,7 +904,7 @@ private fun openWiki(key: ItemListEntryKey, official: Boolean): ViewerInputResul
     val links = SkyBlockDataRepository.wikiLinks(key) ?: return ViewerInputResult.IGNORED
     val url = if (official) links.official else links.independent
     url ?: return ViewerInputResult.IGNORED
-    Util.getPlatform().openUri(URI.create(url))
+    BrowserUtilities.open(url)
     return ViewerInputResult.HANDLED
 }
 

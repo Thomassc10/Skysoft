@@ -3,6 +3,7 @@ package com.skysoft.features.misc.update
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.skysoft.SkysoftMod
+import com.skysoft.utils.BrowserUtilities
 import com.skysoft.utils.SkysoftChat
 import com.skysoft.utils.net.SkysoftHttp
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
@@ -10,7 +11,6 @@ import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.Version
 import net.fabricmc.loader.api.metadata.CustomValue
 import net.minecraft.client.Minecraft
-import net.minecraft.util.Util
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -80,13 +80,12 @@ object ModUpdateChecker {
 
     fun openDownload(): DownloadOpenResult {
         val update = status.update ?: return DownloadOpenResult.NOT_READY
-        return try {
-            Util.getPlatform().openUri(update.url)
-            DownloadOpenResult.OPENED
-        } catch (e: Exception) {
-            SkysoftMod.LOGGER.warn("Failed to open Skysoft update download page", e)
-            SkysoftChat.error("Could not open the Skysoft download page.")
-            DownloadOpenResult.FAILED
+        return when (BrowserUtilities.open(update.url)) {
+            BrowserUtilities.OpenResult.OPENED -> DownloadOpenResult.OPENED
+            BrowserUtilities.OpenResult.FAILED -> {
+                SkysoftChat.error("Could not open the Skysoft download page.")
+                DownloadOpenResult.FAILED
+            }
         }
     }
 
