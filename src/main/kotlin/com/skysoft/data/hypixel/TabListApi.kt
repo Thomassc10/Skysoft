@@ -5,8 +5,10 @@ import com.skysoft.utils.ElapsedTimeMark
 import com.skysoft.utils.TabListFooter
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
+import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import net.minecraft.world.level.GameType
 import net.minecraft.world.scores.PlayerTeam
 import java.util.Collections
 import java.util.UUID
@@ -140,14 +142,19 @@ object TabListApi {
 
     private fun readTabList(): List<TabListEntry> {
         val connection = Minecraft.getInstance().connection ?: return emptyList()
-        return connection.listedOnlinePlayers.map {
+        return connection.listedOnlinePlayers.map { playerInfo ->
+            val isSpectator = playerInfo.gameMode == GameType.SPECTATOR
+            val displayName = playerInfo.tabListDisplayName?.copy()
+                ?: PlayerTeam.formatNameForTeam(playerInfo.team, Component.literal(playerInfo.profile.name))
             TabListEntry(
-                uuid = it.profile.id,
-                profileName = it.profile.name,
-                displayName = it.tabListDisplayName
-                    ?: PlayerTeam.formatNameForTeam(it.team, Component.literal(it.profile.name)),
+                uuid = playerInfo.profile.id,
+                profileName = playerInfo.profile.name,
+                displayName = if (isSpectator) displayName.copy().withStyle(ChatFormatting.ITALIC) else displayName,
+                tabListOrder = playerInfo.tabListOrder,
+                isSpectator = isSpectator,
+                teamName = playerInfo.team?.name.orEmpty(),
             )
-        }
+        }.sortedForDisplay()
     }
 
     private const val READ_INTERVAL_TICKS = 5
@@ -157,4 +164,17 @@ data class TabListEntry(
     val uuid: UUID,
     val profileName: String,
     val displayName: Component,
+    val tabListOrder: Int = 0,
+    val isSpectator: Boolean = false,
+    val teamName: String = "",
 )
+
+internal fun Collection<TabListEntry>.sortedForDisplay(): List<TabListEntry> =
+    sortedWith(
+        compareByDescending<TabListEntry> { it.tabListOrder }
+            .thenBy { it.isSpectator }
+            .thenBy { it.teamName }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.profileName },
+    ).take(MAX_RENDERED_TAB_ENTRIES)
+
+private const val MAX_RENDERED_TAB_ENTRIES = 80
