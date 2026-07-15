@@ -22,6 +22,7 @@ object HeldItemTransforms {
 
     @JvmStatic
     fun apply(itemStack: ItemStack, poseStack: PoseStack) {
+        if (!HeldItemCustomization.isEligible(itemStack)) return
         val config = SkysoftConfigGui.config().gui.heldItem
         if (!config.enabled) return
         val transform = effectiveTransform(itemStack)

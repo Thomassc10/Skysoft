@@ -13,12 +13,14 @@ object HeldItemTextureOverrides {
 
     @JvmStatic
     fun renderStack(itemStack: ItemStack): ItemStack {
+        if (!isEligibleItem(itemStack.item)) return itemStack
         val config = SkysoftConfigGui.config().gui.heldItem
         if (!config.enabled || (!config.usesVanillaTexture(null) && config.itemTextureModes.isEmpty())) return itemStack
         return vanillaStackIfConfigured(itemStack)
     }
 
-    fun previewStack(itemStack: ItemStack): ItemStack = vanillaStackIfConfigured(itemStack)
+    fun previewStack(itemStack: ItemStack): ItemStack =
+        if (isEligibleItem(itemStack.item)) vanillaStackIfConfigured(itemStack) else itemStack
 
     fun hasPackTexture(itemStack: ItemStack): Boolean {
         val model = itemStack.get(DataComponents.ITEM_MODEL) ?: return false
@@ -32,7 +34,10 @@ object HeldItemTextureOverrides {
         return SkysoftConfigGui.config().gui.heldItem.usesVanillaTexture(HeldItemTransforms.itemId(itemStack))
     }
 
-    fun canUseVanillaTexture(itemStack: ItemStack): Boolean = hasPackTexture(itemStack) && !isPaper(itemStack)
+    fun canUseVanillaTexture(itemStack: ItemStack): Boolean =
+        isEligibleItem(itemStack.item) && hasPackTexture(itemStack) && !isPaper(itemStack)
+
+    internal fun isEligibleItem(item: Item): Boolean = HeldItemCustomization.isEligible(item)
 
     fun isPaper(itemStack: ItemStack): Boolean = isPaperItem(itemStack.item)
 

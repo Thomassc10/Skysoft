@@ -15,6 +15,10 @@ object HeldItemSwingVisuals {
 
     @JvmStatic
     fun begin(itemStack: ItemStack, attack: Float, arm: HumanoidArm) {
+        if (!HeldItemCustomization.isEligible(itemStack)) {
+            itemOnlySwing = null
+            return
+        }
         val config = SkysoftConfigGui.config().gui.heldItem
         val transform = HeldItemTransforms.effectiveTransform(itemStack)
         itemOnlySwing = ItemOnlySwing(itemStack, attack, arm).takeIf {

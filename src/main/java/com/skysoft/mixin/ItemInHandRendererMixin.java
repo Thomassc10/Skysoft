@@ -83,15 +83,4 @@ public class ItemInHandRendererMixin {
             ci.cancel();
         }
     }
-
-    @Inject(method = "renderMap", at = @At("HEAD"))
-    private void skysoft$transformHeldMap(
-        PoseStack poseStack,
-        SubmitNodeCollector submitNodeCollector,
-        int light,
-        ItemStack itemStack,
-        CallbackInfo ci
-    ) {
-        HeldItemTransforms.apply(itemStack, poseStack);
-    }
 }

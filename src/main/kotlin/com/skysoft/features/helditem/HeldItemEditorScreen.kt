@@ -39,10 +39,18 @@ object HeldItemEditorScreen {
     }
 
     internal fun previewTransform(itemStack: ItemStack): HeldItemTransformConfig? =
-        (MinecraftClient.screen() as? EditorScreen)?.previewTransform(itemStack)
+        if (HeldItemCustomization.isEligible(itemStack)) {
+            (MinecraftClient.screen() as? EditorScreen)?.previewTransform(itemStack)
+        } else {
+            null
+        }
 
     internal fun previewUsesVanillaTexture(itemStack: ItemStack): Boolean? =
-        (MinecraftClient.screen() as? EditorScreen)?.previewUsesVanillaTexture(itemStack)
+        if (HeldItemCustomization.isEligible(itemStack)) {
+            (MinecraftClient.screen() as? EditorScreen)?.previewUsesVanillaTexture(itemStack)
+        } else {
+            null
+        }
 
     class EditorScreen(private val parent: Screen?) : Screen(Component.literal("Skysoft Held Item")) {
         private val config: HeldItemConfig
