@@ -1,6 +1,7 @@
 package com.skysoft.features.helditem
 
 import com.skysoft.config.HeldItemConfig
+import com.skysoft.config.HeldItemSwingStyle
 import com.skysoft.config.HeldItemTransformConfig
 import com.skysoft.config.HeldItemTransformLimits
 import com.skysoft.config.SkysoftConfigGui
@@ -63,6 +64,9 @@ object HeldItemEditorScreen {
                 store = historyStore,
                 keyProvider = { editorState.historyKey() },
             )
+        }
+        private val controlActions by lazy {
+            HeldItemEditorControlActions(config, editorState, layout, historyController, ::markChanged)
         }
         private var dragKind: DragKind? = null
         private var draggedField: TransformField? = null
@@ -259,20 +263,9 @@ object HeldItemEditorScreen {
                         markChanged(historyController.mutate { editorState.toggleTexture() })
                     }
                 }
-                isLeftClick && layout.targetBounds(EditTarget.GLOBAL).contains(mouseX, mouseY) -> {
-                    activateEditorButton {
-                        historyController.flushPending()
-                        editorState.selectTarget(EditTarget.GLOBAL)
-                    }
-                }
+                isLeftClick && controlActions.activateTargetAt(mouseX, mouseY) == EditorInputHandlingResult.HANDLED -> Unit
                 isLeftClick &&
-                    layout.targetBounds(EditTarget.ITEM).contains(mouseX, mouseY) &&
-                    editorState.currentItemId() != null -> {
-                    activateEditorButton {
-                        historyController.flushPending()
-                        editorState.selectTarget(EditTarget.ITEM)
-                    }
-                }
+                    controlActions.activateAdvancedControlAt(mouseX, mouseY) == EditorInputHandlingResult.HANDLED -> Unit
                 isLeftClick && layout.sliderFieldAt(mouseX, mouseY) != null -> startSliderDrag(mouseX, mouseY)
                 isLeftClick && layout.resetBounds().contains(mouseX, mouseY) && editorState.canResetCurrentTarget() -> {
                     activateEditorButton {
@@ -325,6 +318,50 @@ object HeldItemEditorScreen {
             SkysoftConfigGui.config().saveNow()
             hasUnsavedChanges = false
         }
+    }
+}
+
+private class HeldItemEditorControlActions(
+    private val config: HeldItemConfig,
+    private val state: HeldItemEditorState,
+    private val layout: HeldItemEditorLayout,
+    private val historyController: HeldItemHistoryController,
+    private val markChanged: (ChangeResult) -> Unit,
+) {
+    fun activateTargetAt(mouseX: Int, mouseY: Int): EditorInputHandlingResult {
+        val target = when {
+            layout.targetBounds(EditTarget.GLOBAL).contains(mouseX, mouseY) -> EditTarget.GLOBAL
+            layout.targetBounds(EditTarget.ITEM).contains(mouseX, mouseY) && state.currentItemId() != null -> {
+                EditTarget.ITEM
+            }
+            else -> return EditorInputHandlingResult.UNHANDLED
+        }
+        activateEditorButton {
+            historyController.flushPending()
+            state.selectTarget(target)
+        }
+        return EditorInputHandlingResult.HANDLED
+    }
+
+    fun activateAdvancedControlAt(mouseX: Int, mouseY: Int): EditorInputHandlingResult {
+        if (layout.advancedToggleBounds().contains(mouseX, mouseY)) {
+            activateEditorButton {
+                val previousX = layout.panelX
+                val previousY = layout.panelY
+                layout.toggleAdvanced()
+                if (layout.panelX != previousX || layout.panelY != previousY) {
+                    config.editorX = layout.panelX
+                    config.editorY = layout.panelY
+                    markChanged(ChangeResult.CHANGED)
+                }
+            }
+            return EditorInputHandlingResult.HANDLED
+        }
+        val style = layout.swingStyleAt(mouseX, mouseY) ?: return EditorInputHandlingResult.UNHANDLED
+        activateEditorButton {
+            markChanged(historyController.mutate { state.selectSwingStyle(style) })
+        }
+        return EditorInputHandlingResult.HANDLED
     }
 }
 
@@ -454,15 +491,6 @@ internal class HeldItemEditorState(
         EditTarget.ITEM -> config.usesVanillaTexture(currentItemId())
     }
 
-    fun textureTooltip(): String = when {
-        HeldItemTextureOverrides.isPaper(currentItem()) -> "Unavailable for paper items"
-        target == EditTarget.ITEM && currentItemId() == null -> "Requires a SkyBlock ID"
-        target == EditTarget.GLOBAL && usesVanillaTexture() -> "Restore pack textures globally"
-        target == EditTarget.GLOBAL -> "Use vanilla textures globally"
-        usesVanillaTexture() -> "Restore pack texture for this item"
-        else -> "Use vanilla texture for this item"
-    }
-
     fun previewItem(): ItemStack = HeldItemTextureOverrides.previewStack(currentItem())
 
     fun toggleTexture(): ChangeResult {
@@ -493,6 +521,10 @@ internal class HeldItemEditorState(
         setField(field, field.value(displayTransform()) + amount)
     }
 
+    fun selectSwingStyle(style: HeldItemSwingStyle) {
+        editableTransform()?.swingStyle = style
+    }
+
     fun resetCurrentTarget(): ChangeResult {
         return if (target == EditTarget.GLOBAL) {
             config.resetGlobalCustomization()
@@ -515,6 +547,15 @@ internal class HeldItemEditorState(
     }
 }
 
+private fun HeldItemEditorState.textureTooltip(): String = when {
+    HeldItemTextureOverrides.isPaper(currentItem()) -> "Unavailable for paper items"
+    target == EditTarget.ITEM && currentItemId() == null -> "Requires a SkyBlock ID"
+    target == EditTarget.GLOBAL && usesVanillaTexture() -> "Restore pack textures globally"
+    target == EditTarget.GLOBAL -> "Use vanilla textures globally"
+    usesVanillaTexture() -> "Restore pack texture for this item"
+    else -> "Use vanilla texture for this item"
+}
+
 private fun HeldItemEditorState.historyKey(): HeldItemHistoryKey? = when (target) {
     EditTarget.GLOBAL -> HeldItemHistoryKey.GLOBAL
     EditTarget.ITEM -> currentItemId()?.let(HeldItemHistoryKey::item)
@@ -527,13 +568,15 @@ private class HeldItemEditorLayout {
         private set
     private var screenWidth = 0
     private var screenHeight = 0
+    var isAdvancedExpanded = false
+        private set
 
     fun initialize(width: Int, height: Int, configuredX: Int, configuredY: Int) {
         screenWidth = width
         screenHeight = height
         panelX = configuredX.takeUnless { it == HeldItemConfig.AUTO_EDITOR_POSITION } ?: EditorPanel.MARGIN
         panelY = configuredY.takeUnless { it == HeldItemConfig.AUTO_EDITOR_POSITION }
-            ?: ((height - EditorPanel.HEIGHT) / 2)
+            ?: ((height - EditorPanel.BASE_HEIGHT) / 2)
         constrainPanel()
     }
 
@@ -543,7 +586,7 @@ private class HeldItemEditorLayout {
         constrainPanel()
     }
 
-    fun panelBounds(): Rect = Rect(panelX, panelY, panelWidth(), EditorPanel.HEIGHT)
+    fun panelBounds(): Rect = Rect(panelX, panelY, panelWidth(), panelHeight())
 
     fun titleDragBounds(): Rect = Rect(panelX, panelY, panelWidth(), EditorHeader.HEIGHT)
 
@@ -565,25 +608,44 @@ private class HeldItemEditorLayout {
         return Rect(panelX + EditorPanel.INSET + target.ordinal * width, panelY + EditorTabs.TARGET_Y, width, EditorTabs.HEIGHT)
     }
 
-    fun sliderRowBounds(field: TransformField): Rect = Rect(
-        panelX + EditorPanel.INSET,
-        panelY + EditorSliders.START_Y + field.ordinal * EditorSliders.ROW_HEIGHT,
-        contentWidth(),
-        EditorSliders.ROW_HEIGHT,
-    )
+    fun toggleAdvanced() {
+        isAdvancedExpanded = !isAdvancedExpanded
+        constrainPanel()
+    }
+
+    fun sliderRowBounds(field: TransformField): Rect {
+        val basicIndex = EditorSliderFields.BASIC.indexOf(field)
+        val rowY = if (basicIndex >= 0) {
+            EditorSliders.START_Y + basicIndex * EditorSliders.ROW_HEIGHT
+        } else {
+            val rotationIndex = EditorSliderFields.ROTATION.indexOf(field)
+            require(rotationIndex >= 0) { "Unknown held item slider field $field" }
+            EditorAdvanced.ROTATION_START_Y + rotationIndex * EditorAdvanced.ROTATION_ROW_HEIGHT
+        }
+        val rowHeight = if (basicIndex >= 0) EditorSliders.ROW_HEIGHT else EditorAdvanced.ROTATION_ROW_HEIGHT
+        return Rect(
+            panelX + EditorPanel.INSET,
+            panelY + rowY,
+            contentWidth(),
+            rowHeight,
+        )
+    }
 
     fun sliderTrackBounds(field: TransformField): Rect {
         val row = sliderRowBounds(field)
+        val isRotation = field in EditorSliderFields.ROTATION
+        val labelWidth = if (isRotation) EditorAdvanced.ROTATION_LABEL_WIDTH else EditorSliders.LABEL_WIDTH
+        val reservedWidth = if (isRotation) EditorAdvanced.ROTATION_RESERVED_WIDTH else EditorSliders.RESERVED_WIDTH
         return Rect(
-            row.x + EditorSliders.LABEL_WIDTH,
+            row.x + labelWidth,
             row.y + EditorSliders.TRACK_Y,
-            row.width - EditorSliders.RESERVED_WIDTH,
+            row.width - reservedWidth,
             EditorSliders.TRACK_HEIGHT,
         )
     }
 
     fun sliderFieldAt(mouseX: Int, mouseY: Int): TransformField? =
-        TransformField.entries.firstOrNull { sliderRowBounds(it).contains(mouseX, mouseY) }
+        visibleSliderFields().firstOrNull { sliderRowBounds(it).contains(mouseX, mouseY) }
 
     fun resetBounds(): Rect = actionBounds().reset
 
@@ -600,7 +662,7 @@ private class HeldItemEditorLayout {
         val isCompact = contentWidth() < EditorActions.COMPACT_CONTENT_WIDTH
         val resetWidth = if (isCompact) EditorActions.COMPACT_RESET_WIDTH else EditorActions.RESET_WIDTH
         val doneWidth = if (isCompact) EditorActions.COMPACT_DONE_WIDTH else EditorActions.DONE_WIDTH
-        val actionY = panelY + EditorActions.Y
+        val actionY = panelY + EditorActions.y(isAdvancedExpanded)
         val reset = Rect(panelX + EditorPanel.INSET, actionY, resetWidth, EditorActions.HEIGHT)
         val done = Rect(
             panelX + panelWidth() - EditorPanel.INSET - doneWidth,
@@ -636,9 +698,59 @@ private class HeldItemEditorLayout {
         )
         panelY = panelY.coerceIn(
             EditorPanel.MARGIN,
-            max(EditorPanel.MARGIN, screenHeight - EditorPanel.HEIGHT - EditorPanel.MARGIN),
+            max(EditorPanel.MARGIN, screenHeight - panelHeight() - EditorPanel.MARGIN),
         )
     }
+
+    private fun panelHeight(): Int = if (isAdvancedExpanded) {
+        EditorPanel.BASE_HEIGHT + EditorAdvanced.EXPANDED_HEIGHT
+    } else {
+        EditorPanel.BASE_HEIGHT
+    }
+}
+
+private fun HeldItemEditorLayout.advancedToggleBounds(): Rect {
+    val panel = panelBounds()
+    return Rect(
+        panel.x + (panel.width - EditorAdvanced.TOGGLE_WIDTH) / 2,
+        panel.y + EditorAdvanced.TOGGLE_Y,
+        EditorAdvanced.TOGGLE_WIDTH,
+        EditorAdvanced.TOGGLE_HEIGHT,
+    )
+}
+
+private fun HeldItemEditorLayout.swingStyleBounds(style: HeldItemSwingStyle): Rect {
+    val row = swingStyleRowBounds()
+    val buttonsX = row.x + EditorAdvanced.STYLE_LABEL_WIDTH
+    val buttonsWidth = row.width - EditorAdvanced.STYLE_LABEL_WIDTH
+    val buttonWidth = (buttonsWidth - EditorAdvanced.STYLE_BUTTON_GAP) / HeldItemSwingStyle.entries.size
+    return Rect(
+        buttonsX + style.ordinal * (buttonWidth + EditorAdvanced.STYLE_BUTTON_GAP),
+        row.y + EditorAdvanced.STYLE_BUTTON_Y,
+        buttonWidth,
+        EditorAdvanced.STYLE_BUTTON_HEIGHT,
+    )
+}
+
+private fun HeldItemEditorLayout.swingStyleAt(mouseX: Int, mouseY: Int): HeldItemSwingStyle? =
+    HeldItemSwingStyle.entries.takeIf { isAdvancedExpanded }?.firstOrNull {
+        swingStyleBounds(it).contains(mouseX, mouseY)
+    }
+
+private fun HeldItemEditorLayout.swingStyleRowBounds(): Rect {
+    val panel = panelBounds()
+    return Rect(
+        panel.x + EditorPanel.INSET,
+        panel.y + EditorAdvanced.CONTENT_Y,
+        panel.width - EditorPanel.INSET * 2,
+        EditorAdvanced.STYLE_ROW_HEIGHT,
+    )
+}
+
+private fun HeldItemEditorLayout.visibleSliderFields(): List<TransformField> = if (isAdvancedExpanded) {
+    EditorSliderFields.ALL
+} else {
+    EditorSliderFields.BASIC
 }
 
 private data class EditorActionBounds(
@@ -722,7 +834,11 @@ private object HeldItemEditorRenderer {
         val itemId = state.currentItemId()
 
         drawTargetTabs(context, font, state, layout, mouseX, mouseY, itemId != null)
-        TransformField.entries.forEach { drawSlider(context, font, state, layout, it, mouseX, mouseY) }
+        layout.visibleSliderFields().forEach { drawSlider(context, font, state, layout, it, mouseX, mouseY) }
+        drawAdvancedToggle(context, font, layout, mouseX, mouseY)
+        if (layout.isAdvancedExpanded) {
+            drawSwingStyle(context, font, state, layout, mouseX, mouseY)
+        }
         drawButton(
             context,
             font,
@@ -751,6 +867,66 @@ private object HeldItemEditorRenderer {
             mouseY,
             tone = PixelButtonTone.CONFIRM,
         )
+    }
+
+    private fun drawAdvancedToggle(
+        context: GuiGraphicsExtractor,
+        font: Font,
+        layout: HeldItemEditorLayout,
+        mouseX: Int,
+        mouseY: Int,
+    ) {
+        val bounds = layout.advancedToggleBounds()
+        PixelButtonRenderer.draw(
+            context,
+            font,
+            bounds,
+            "",
+            layout.isAdvancedExpanded,
+            bounds.contains(mouseX, mouseY),
+            true,
+        )
+        drawPixelIcon(
+            context,
+            bounds,
+            if (layout.isAdvancedExpanded) COLLAPSE_ICON else EXPAND_ICON,
+            EditorAdvanced.TOGGLE_ICON_SCALE,
+            true,
+        )
+        if (bounds.contains(mouseX, mouseY)) {
+            val tooltip = if (layout.isAdvancedExpanded) "Fewer options" else "More options"
+            SkysoftNativeTooltip.setForNextFrame(context, listOf(tooltip), mouseX, mouseY)
+        }
+    }
+
+    private fun drawSwingStyle(
+        context: GuiGraphicsExtractor,
+        font: Font,
+        state: HeldItemEditorState,
+        layout: HeldItemEditorLayout,
+        mouseX: Int,
+        mouseY: Int,
+    ) {
+        val labelBounds = layout.swingStyleRowBounds()
+        context.text(
+            font,
+            "Swing Style",
+            labelBounds.x,
+            layout.swingStyleBounds(HeldItemSwingStyle.VANILLA).y + EditorAdvanced.STYLE_TEXT_Y,
+            EditorColors.MUTED_TEXT,
+            false,
+        )
+        HeldItemSwingStyle.entries.forEach { style ->
+            drawButton(
+                context,
+                font,
+                layout.swingStyleBounds(style),
+                style.label,
+                state.displayTransform().swingStyle == style,
+                mouseX,
+                mouseY,
+            )
+        }
     }
 
     private fun drawTextureToggle(
@@ -830,6 +1006,8 @@ private object HeldItemEditorRenderer {
     private val TEXTURE_RESTORE_ICON = listOf("..X....", ".XX....", "XXXXXXX", ".XX....", "..X....")
     private val UNDO_ICON = listOf("..X..", ".XX..", "XXXXX", ".XX..", "..X..")
     private val REDO_ICON = listOf("..X..", "..XX.", "XXXXX", "..XX.", "..X..")
+    private val EXPAND_ICON = listOf("X...X", ".X.X.", "..X..")
+    private val COLLAPSE_ICON = listOf("..X..", ".X.X.", "X...X")
 
     private fun drawTargetTabs(
         context: GuiGraphicsExtractor,
@@ -942,6 +1120,11 @@ private enum class DragKind {
     SLIDER,
 }
 
+private enum class EditorInputHandlingResult {
+    HANDLED,
+    UNHANDLED,
+}
+
 private val EDITOR_MOUSE_BUTTONS = setOf(GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_MOUSE_BUTTON_RIGHT)
 
 internal enum class TransformField(
@@ -960,6 +1143,24 @@ internal enum class TransformField(
         HeldItemTransformLimits.MAX_SWING_SPEED,
         EditorInput.SWING_SCROLL_STEP,
     ),
+    ROTATION_X(
+        "Rotate X",
+        HeldItemTransformLimits.MIN_ROTATION,
+        HeldItemTransformLimits.MAX_ROTATION,
+        EditorInput.ROTATION_SCROLL_STEP,
+    ),
+    ROTATION_Y(
+        "Rotate Y",
+        HeldItemTransformLimits.MIN_ROTATION,
+        HeldItemTransformLimits.MAX_ROTATION,
+        EditorInput.ROTATION_SCROLL_STEP,
+    ),
+    ROTATION_Z(
+        "Rotate Z",
+        HeldItemTransformLimits.MIN_ROTATION,
+        HeldItemTransformLimits.MAX_ROTATION,
+        EditorInput.ROTATION_SCROLL_STEP,
+    ),
     ;
 
     fun value(transform: HeldItemTransformConfig): Float = when (this) {
@@ -968,6 +1169,9 @@ internal enum class TransformField(
         Z -> transform.z
         SCALE -> transform.scale
         SWING -> transform.swingSpeed
+        ROTATION_X -> transform.rotationX
+        ROTATION_Y -> transform.rotationY
+        ROTATION_Z -> transform.rotationZ
     }
 
     fun setValue(transform: HeldItemTransformConfig, value: Float) {
@@ -977,19 +1181,45 @@ internal enum class TransformField(
             Z -> transform.z = value
             SCALE -> transform.scale = value
             SWING -> transform.swingSpeed = value
+            ROTATION_X -> transform.rotationX = value
+            ROTATION_Y -> transform.rotationY = value
+            ROTATION_Z -> transform.rotationZ = value
         }
     }
 
     fun formattedValue(value: Float): String {
+        if (this in EditorSliderFields.ROTATION) return String.format(Locale.US, "%.0f°", value)
         val text = String.format(Locale.US, "%.2f", value)
         return if (this == SCALE || this == SWING) "${text}x" else text
     }
 }
 
+private object EditorSliderFields {
+    val BASIC = listOf(
+        TransformField.X,
+        TransformField.Y,
+        TransformField.Z,
+        TransformField.SCALE,
+        TransformField.SWING,
+    )
+    val ROTATION = listOf(
+        TransformField.ROTATION_X,
+        TransformField.ROTATION_Y,
+        TransformField.ROTATION_Z,
+    )
+    val ALL = BASIC + ROTATION
+}
+
+private val HeldItemSwingStyle.label: String
+    get() = when (this) {
+        HeldItemSwingStyle.VANILLA -> "Vanilla"
+        HeldItemSwingStyle.ITEM_ONLY -> "Item Only"
+    }
+
 private object EditorPanel {
     const val WIDTH = 224
     const val MIN_WIDTH = 184
-    const val HEIGHT = 188
+    const val BASE_HEIGHT = 190
     const val MARGIN = 8
     const val INSET = 9
     const val BORDER = 1
@@ -1030,8 +1260,27 @@ private object EditorSliders {
     const val KNOB_OVERHANG = 2
 }
 
+private object EditorAdvanced {
+    const val TOGGLE_Y = 154
+    const val TOGGLE_WIDTH = 18
+    const val TOGGLE_HEIGHT = 10
+    const val TOGGLE_ICON_SCALE = 1
+    const val CONTENT_Y = 164
+    const val STYLE_ROW_HEIGHT = 16
+    const val STYLE_LABEL_WIDTH = 66
+    const val STYLE_BUTTON_GAP = 4
+    const val STYLE_BUTTON_Y = 0
+    const val STYLE_BUTTON_HEIGHT = 16
+    const val STYLE_TEXT_Y = 4
+    const val ROTATION_START_Y = CONTENT_Y + STYLE_ROW_HEIGHT
+    const val ROTATION_ROW_HEIGHT = 16
+    const val ROTATION_LABEL_WIDTH = 50
+    const val ROTATION_RESERVED_WIDTH = 92
+    const val EXPANDED_HEIGHT = STYLE_ROW_HEIGHT + ROTATION_ROW_HEIGHT * 3
+}
+
 private object EditorActions {
-    const val Y = 164
+    private const val BASE_Y = 166
     const val HEIGHT = 16
     const val RESET_WIDTH = 70
     const val COMPACT_RESET_WIDTH = 58
@@ -1044,6 +1293,12 @@ private object EditorActions {
     const val HISTORY_ICON_SCALE = 2
     const val GROUP_GAP = 4
     const val GROUP_BASE_WIDTH = HISTORY_SIZE * 2 + TEXTURE_WIDTH
+
+    fun y(isAdvancedExpanded: Boolean): Int = if (isAdvancedExpanded) {
+        BASE_Y + EditorAdvanced.EXPANDED_HEIGHT
+    } else {
+        BASE_Y
+    }
 }
 
 private object EditorInput {
@@ -1053,6 +1308,7 @@ private object EditorInput {
     const val DEPTH_SCROLL_STEP = 0.05f
     const val SCALE_SCROLL_STEP = 0.05f
     const val SWING_SCROLL_STEP = 0.05f
+    const val ROTATION_SCROLL_STEP = 5f
 }
 
 private object EditorAnimation {

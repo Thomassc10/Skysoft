@@ -2,6 +2,7 @@ package com.skysoft.features.helditem
 
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.math.Axis
 import com.skysoft.config.HeldItemTransformConfig
 import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.data.skyblock.SkyBlockItemId.skyBlockId
@@ -27,6 +28,7 @@ object HeldItemTransforms {
         if (!transform.hasRenderChanges()) return
 
         applyPosition(poseStack, transform, RenderSystem.getModelViewStack())
+        applyRotation(poseStack, transform)
         if (transform.scale != 1f) poseStack.scale(transform.scale, transform.scale, transform.scale)
     }
 
@@ -72,6 +74,12 @@ object HeldItemTransforms {
             .mul(screenTransform)
             .mul(viewTransform)
         poseStack.last().pose().mulLocal(cameraSpaceTransform)
+    }
+
+    internal fun applyRotation(poseStack: PoseStack, transform: HeldItemTransformConfig) {
+        if (transform.rotationX != 0f) poseStack.mulPose(Axis.XP.rotationDegrees(transform.rotationX))
+        if (transform.rotationY != 0f) poseStack.mulPose(Axis.YP.rotationDegrees(transform.rotationY))
+        if (transform.rotationZ != 0f) poseStack.mulPose(Axis.ZP.rotationDegrees(transform.rotationZ))
     }
 }
 

@@ -172,6 +172,10 @@ internal data class HeldItemTransformSnapshot(
     val z: Float,
     val scale: Float,
     val swingSpeed: Float,
+    val swingStyle: HeldItemSwingStyle,
+    val rotationX: Float,
+    val rotationY: Float,
+    val rotationZ: Float,
 )
 
 private fun HeldItemTransformConfig.snapshot(): HeldItemTransformSnapshot = HeldItemTransformSnapshot(
@@ -180,6 +184,10 @@ private fun HeldItemTransformConfig.snapshot(): HeldItemTransformSnapshot = Held
     z = z,
     scale = scale,
     swingSpeed = swingSpeed,
+    swingStyle = swingStyle,
+    rotationX = rotationX,
+    rotationY = rotationY,
+    rotationZ = rotationZ,
 )
 
 private fun HeldItemTransformSnapshot.toConfig(): HeldItemTransformConfig = HeldItemTransformConfig(
@@ -188,6 +196,10 @@ private fun HeldItemTransformSnapshot.toConfig(): HeldItemTransformConfig = Held
     z = z,
     scale = scale,
     swingSpeed = swingSpeed,
+    swingStyle = swingStyle,
+    rotationX = rotationX,
+    rotationY = rotationY,
+    rotationZ = rotationZ,
 )
 
 private fun HeldItemTransformConfig.restore(snapshot: HeldItemTransformSnapshot) {
@@ -196,6 +208,10 @@ private fun HeldItemTransformConfig.restore(snapshot: HeldItemTransformSnapshot)
     z = snapshot.z
     scale = snapshot.scale
     swingSpeed = snapshot.swingSpeed
+    swingStyle = snapshot.swingStyle
+    rotationX = snapshot.rotationX
+    rotationY = snapshot.rotationY
+    rotationZ = snapshot.rotationZ
 }
 
 enum class HeldItemTextureMode {
@@ -204,6 +220,11 @@ enum class HeldItemTextureMode {
     ;
 
     fun toggled(): HeldItemTextureMode = if (this == PACK) VANILLA else PACK
+}
+
+enum class HeldItemSwingStyle {
+    VANILLA,
+    ITEM_ONLY,
 }
 
 class HeldItemTransformConfig(
@@ -215,8 +236,22 @@ class HeldItemTransformConfig(
     @field:Expose
     @field:SerializedName(value = "swingSpeed", alternate = ["swingDuration"])
     var swingSpeed: Float = 1f,
+    @JvmField @field:Expose var swingStyle: HeldItemSwingStyle = HeldItemSwingStyle.VANILLA,
+    @JvmField @field:Expose var rotationX: Float = 0f,
+    @JvmField @field:Expose var rotationY: Float = 0f,
+    @JvmField @field:Expose var rotationZ: Float = 0f,
 ) {
-    fun copyValues(): HeldItemTransformConfig = HeldItemTransformConfig(x, y, z, scale, swingSpeed)
+    fun copyValues(): HeldItemTransformConfig = HeldItemTransformConfig(
+        x = x,
+        y = y,
+        z = z,
+        scale = scale,
+        swingSpeed = swingSpeed,
+        swingStyle = swingStyle,
+        rotationX = rotationX,
+        rotationY = rotationY,
+        rotationZ = rotationZ,
+    )
 
     fun reset() {
         x = 0f
@@ -224,6 +259,10 @@ class HeldItemTransformConfig(
         z = 0f
         scale = 1f
         swingSpeed = 1f
+        swingStyle = HeldItemSwingStyle.VANILLA
+        rotationX = 0f
+        rotationY = 0f
+        rotationZ = 0f
     }
 
     fun repairLoadedValues() {
@@ -235,11 +274,16 @@ class HeldItemTransformConfig(
             HeldItemTransformLimits.MIN_SWING_SPEED,
             HeldItemTransformLimits.MAX_SWING_SPEED,
         )
+        rotationX = rotationX.coerceIn(HeldItemTransformLimits.MIN_ROTATION, HeldItemTransformLimits.MAX_ROTATION)
+        rotationY = rotationY.coerceIn(HeldItemTransformLimits.MIN_ROTATION, HeldItemTransformLimits.MAX_ROTATION)
+        rotationZ = rotationZ.coerceIn(HeldItemTransformLimits.MIN_ROTATION, HeldItemTransformLimits.MAX_ROTATION)
     }
 
-    fun hasRenderChanges(): Boolean = x != 0f || y != 0f || z != 0f || scale != 1f
+    fun hasRenderChanges(): Boolean =
+        x != 0f || y != 0f || z != 0f || scale != 1f || rotationX != 0f || rotationY != 0f || rotationZ != 0f
 
-    fun isDefault(): Boolean = !hasRenderChanges() && swingSpeed == 1f
+    fun isDefault(): Boolean =
+        !hasRenderChanges() && swingSpeed == 1f && swingStyle == HeldItemSwingStyle.VANILLA
 }
 
 object HeldItemTransformLimits {
@@ -253,4 +297,6 @@ object HeldItemTransformLimits {
     const val MAX_SCALE = 3f
     const val MIN_SWING_SPEED = 0.25f
     const val MAX_SWING_SPEED = 3f
+    const val MIN_ROTATION = -180f
+    const val MAX_ROTATION = 180f
 }
