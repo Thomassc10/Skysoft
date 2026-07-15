@@ -10,6 +10,17 @@ internal data class ItemListTierDropdown(
     val bounds: Rect,
     val tierBounds: List<Rect>,
 ) {
+    fun renderBackground(context: GuiGraphicsExtractor) {
+        context.fill(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, DROPDOWN_BORDER)
+        context.fill(
+            bounds.x + 1,
+            bounds.y + 1,
+            bounds.x + bounds.width - 1,
+            bounds.y + bounds.height - 1,
+            DROPDOWN_FILL,
+        )
+    }
+
     companion object {
         fun create(panel: Rect, anchor: Rect, tierCount: Int, requestedSlotSize: Int): ItemListTierDropdown {
             require(tierCount > 0)
@@ -52,6 +63,8 @@ internal data class ItemListTierDropdown(
         private const val MAX_COLUMNS = 9
         private const val PADDING = 2
         private const val GAP = 2
+        private val DROPDOWN_BORDER = 0xFF70777D.toInt()
+        private val DROPDOWN_FILL = 0xF0181B1E.toInt()
     }
 }
 
@@ -84,20 +97,7 @@ internal class ItemListTierDropdownState {
         )
         dropdown = current
         tierKeys = family.tiers
-        context.fill(
-            current.bounds.x,
-            current.bounds.y,
-            current.bounds.x + current.bounds.width,
-            current.bounds.y + current.bounds.height,
-            DROPDOWN_BORDER,
-        )
-        context.fill(
-            current.bounds.x + 1,
-            current.bounds.y + 1,
-            current.bounds.x + current.bounds.width - 1,
-            current.bounds.y + current.bounds.height - 1,
-            DROPDOWN_FILL,
-        )
+        current.renderBackground(context)
         family.tiers.forEachIndexed { index, tierKey ->
             SkyBlockDataRepository.entry(tierKey)?.let { drawTier(current.tierBounds[index], it) }
         }
@@ -116,8 +116,4 @@ internal class ItemListTierDropdownState {
         tierKeys = emptyList()
     }
 
-    private companion object {
-        val DROPDOWN_BORDER = 0xFF70777D.toInt()
-        val DROPDOWN_FILL = 0xF0181B1E.toInt()
-    }
 }

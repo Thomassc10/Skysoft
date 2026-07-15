@@ -96,10 +96,9 @@ object SkyBlockDataRepository {
             val current = snapshot ?: return null
             val entity = current.entities[entityId] ?: return null
             val island = entity.island ?: return null
-            val position = entity.position ?: return null
-            return current.warps.asSequence()
-                .filter { it.island == island }
-                .minByOrNull { it.position.distanceSq(position) }
+            val candidates = current.warps.filter { it.island == island }
+            val position = entity.position ?: return candidates.firstOrNull()
+            return candidates.minByOrNull { it.position.distanceSq(position) }
         }
     }
 

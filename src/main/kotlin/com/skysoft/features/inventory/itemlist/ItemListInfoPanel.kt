@@ -278,7 +278,7 @@ internal fun renderEntityIcon(
     if (bounds.contains(mouseX, mouseY)) {
         SkysoftNativeTooltip.setForNextFrame(
             context,
-            entityTooltipLines(entityId, entity, entity?.isWarpableNpc() == true, dropSources),
+            entityTooltipLines(entityId, entity, entity?.canNavigateToEntity() == true, dropSources),
             mouseX,
             mouseY,
         )
@@ -313,7 +313,15 @@ internal fun entityTooltipLines(
 private fun dropChanceLines(entity: SkyBlockEntityInfo, sources: List<SkyBlockDropSource>): List<String> {
     val known = sources.filter { it.chance != null }
         .distinctBy { it.sourceName to it.chance }
-    if (known.size == 1) return listOf("§7Drop chance: §f${formatDropChance(requireNotNull(known.single().chance))}")
+    if (known.size == 1) {
+        val source = known.single()
+        val label = if (source.details.any { it.contains("Pocket Black Hole", ignoreCase = true) }) {
+            "Pocket Black Hole chance"
+        } else {
+            "Drop chance"
+        }
+        return listOf("§7$label: §f${formatDropChance(requireNotNull(source.chance))}")
+    }
     return known.map { source ->
         val name = source.sourceName?.takeUnless { it.equals(entity.name, ignoreCase = true) } ?: "Drop"
         "§7$name chance: §f${formatDropChance(requireNotNull(source.chance))}"
@@ -352,8 +360,9 @@ private fun slayerSpawnDescription(entityId: String): String {
     return "Spawned from a Tier ${match.groupValues[2]} $boss Slayer quest"
 }
 
-internal fun SkyBlockEntityInfo.isWarpableNpc(): Boolean =
-    type.contains("NPC", ignoreCase = true) && SkyBlockDataRepository.ViewerData.bestWarpFor(id) != null
+internal fun SkyBlockEntityInfo.canNavigateToEntity(): Boolean =
+    SkyBlockDataRepository.ViewerData.bestWarpFor(id) != null &&
+        (position != null || island != com.skysoft.data.hypixel.HypixelLocationState.currentIsland)
 
 private val ENTITY_SLOT_BORDER = 0xFF111315.toInt()
 private val ENTITY_SLOT_FILL = 0xD0202428.toInt()

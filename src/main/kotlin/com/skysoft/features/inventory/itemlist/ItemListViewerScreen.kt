@@ -49,15 +49,18 @@ internal class ItemListViewerScreen(
     private val infoPanel = ItemListInfoPanel()
     private val obtainSourcesPanel = ItemListObtainSourcesPanel()
     private val bazaarPanel = ItemListBazaarPanel()
+    private val fusionSelectorPanel = ItemListFusionSelectorPanel()
     private var layout: ViewerLayout? = null
     private var ingredientBounds: List<Pair<Rect, ItemListEntryKey>> = emptyList()
     private var progressionBounds: List<Pair<Rect, SkyBlockProgressionRequirement>> = emptyList()
     private var entityBounds: List<Pair<Rect, String>> = emptyList()
     private var petBounds: List<PetIngredientBounds> = emptyList()
+    private var fusionIngredientTriggers: List<FusionIngredientTrigger> = emptyList()
     private val petLevels = mutableMapOf<RecipePetLevelKey, Int>()
 
     override fun extractRenderState(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         selection.ensureAvailableMode()
+        if (mode != ItemListViewMode.RECIPES || selectedSupplemental != null) fusionSelectorPanel.closeSelector()
         context.fill(0, 0, width, height, SCREEN_OVERLAY)
         val currentLayout = ViewerLayout.create(width, height)
         layout = currentLayout
@@ -76,6 +79,7 @@ internal class ItemListViewerScreen(
                 progressionBounds = emptyList()
                 entityBounds = emptyList()
                 petBounds = emptyList()
+                fusionIngredientTriggers = emptyList()
                 infoPanel.render(context, font, currentLayout.content, currentKey, mouseX, mouseY)
                 renderInfoLinks(context, font, currentLayout, currentKey, mouseX, mouseY)
             }
@@ -117,17 +121,24 @@ internal class ItemListViewerScreen(
         return if (result.isHandled) true else super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }
 
-    override fun keyPressed(event: KeyEvent): Boolean = when (event.key()) {
-        GLFW.GLFW_KEY_BACKSPACE -> navigateBack().isHandled
-        GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1).isHandled
-        GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1).isHandled
-        GLFW.GLFW_KEY_R -> selection.changeMode(ItemListViewMode.RECIPES).isHandled
-        GLFW.GLFW_KEY_U -> selection.changeMode(ItemListViewMode.USAGES).isHandled
-        GLFW.GLFW_KEY_A -> {
-            ItemListState.toggleFavorite(currentKey)
-            true
+    override fun keyPressed(event: KeyEvent): Boolean {
+        if (event.key() in listOf(GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE) &&
+            fusionSelectorPanel.closeSelector().isHandled
+        ) {
+            return true
         }
-        else -> return super.keyPressed(event)
+        return when (event.key()) {
+            GLFW.GLFW_KEY_BACKSPACE -> navigateBack().isHandled
+            GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1).isHandled
+            GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1).isHandled
+            GLFW.GLFW_KEY_R -> selection.changeMode(ItemListViewMode.RECIPES).isHandled
+            GLFW.GLFW_KEY_U -> selection.changeMode(ItemListViewMode.USAGES).isHandled
+            GLFW.GLFW_KEY_A -> {
+                ItemListState.toggleFavorite(currentKey)
+                true
+            }
+            else -> super.keyPressed(event)
+        }
     }
 
     override fun onClose() {
@@ -167,6 +178,14 @@ internal class ItemListViewerScreen(
             } else {
                 ViewerInputResult.IGNORED
             }
+        }.orElse {
+            if (mode == ItemListViewMode.RECIPES && selectedSupplemental == ViewerSupplementalCategory.HUNTING) {
+                obtainSourcesPanel.clickHunting(currentKey, mouseX, mouseY)
+            } else {
+                ViewerInputResult.IGNORED
+            }
+        }.orElse {
+            fusionSelectorPanel.click(fusionIngredientTriggers, mouseX, mouseY)
         }.orElse {
             sendProgressionCommandAt(progressionBounds, mouseX, mouseY)
         }.orElse {
@@ -251,6 +270,7 @@ internal class ItemListViewerScreen(
         progressionBounds = emptyList()
         entityBounds = emptyList()
         petBounds = emptyList()
+        fusionIngredientTriggers = emptyList()
         val categories = selection.currentCategories().take(MAX_CATEGORY_BUTTONS)
         selection.ensureSelectedCategory(categories)
         categories.forEachIndexed { index, category ->
@@ -278,6 +298,19 @@ internal class ItemListViewerScreen(
                 )
                 return
             }
+            ViewerSupplementalCategory.HUNTING -> {
+                ingredientBounds = emptyList()
+                entityBounds = obtainSourcesPanel.render(
+                    context,
+                    font,
+                    layout.recipeGrid.bounds,
+                    currentKey,
+                    mouseX,
+                    mouseY,
+                    SPECIALIZED_DETAIL_MARKERS,
+                )
+                return
+            }
             ViewerSupplementalCategory.BAZAAR -> {
                 ingredientBounds = emptyList()
                 bazaarPanel.render(context, font, layout.recipeGrid.bounds, currentKey, mouseX, mouseY)
@@ -298,6 +331,7 @@ internal class ItemListViewerScreen(
                 is SkyBlockRecipe.Process -> renderProcess(context, tile, recipe, mouseX, mouseY)
             }
         }
+        fusionSelectorPanel.render(context, font, layout.recipeGrid.bounds, recipes, mouseX, mouseY)
     }
 
     private fun renderCrafting(
@@ -345,7 +379,20 @@ internal class ItemListViewerScreen(
         }
         visibleIngredients.forEachIndexed { index, ingredient ->
             val bounds = process.ingredients[index]
-            drawIngredient(context, bounds, ingredient, recipe, mouseX, mouseY)?.let { clickable += bounds to it }
+            val target = FusionIngredientTarget(recipe, index)
+            val isSelectable = recipe.type == SkyBlockRecipeType.ATTRIBUTE_FUSION && ingredient.alternatives.isNotEmpty()
+            val selectedIngredient = if (isSelectable) fusionSelectorPanel.selectedIngredient(target) else null
+            drawIngredient(
+                context,
+                bounds,
+                ingredient,
+                recipe,
+                mouseX,
+                mouseY,
+                selectedIngredient,
+                isSelectable,
+            )?.let { clickable += bounds to it }
+            if (isSelectable) fusionIngredientTriggers += FusionIngredientTrigger(bounds, target)
         }
         LegacyTextRenderer.draw(context, "§7->", process.arrow.x, process.arrow.y)
         drawIngredient(context, process.result, recipe.result, recipe, mouseX, mouseY)
@@ -358,6 +405,7 @@ internal class ItemListViewerScreen(
         val minionFamily = minionFamily(currentKey)
         renderTierFooter(context, font, layout, currentKey, minionFamily, mouseX, mouseY)
         if (mode == ItemListViewMode.INFO) return
+        if (fusionSelectorPanel.isOpen) return
         if (selectedSupplemental != null) return
         val recipes = selection.selectedRecipes(selection.currentRecipes())
         val pageCount = recipePageCount(recipes.size, layout.recipeGrid.pageSize)
@@ -394,33 +442,42 @@ internal class ItemListViewerScreen(
         recipe: SkyBlockRecipe,
         mouseX: Int,
         mouseY: Int,
+        displayedOverride: RecipeIngredient? = null,
+        isSelectable: Boolean = false,
     ): ItemListEntryKey? {
         context.fill(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, SLOT_BORDER)
         context.fill(bounds.x + 1, bounds.y + 1, bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, SLOT_FILL)
         if (ingredient == null) return null
-        val key = ingredient.itemKey()
-        val petLevelKey = if (ingredient.kind == RecipeIngredientKind.PET) recipePetLevelKey(recipe, ingredient.id) else null
-        val petLevel = petLevelKey?.let { petLevels.getOrPut(it) { 1 } }
-        val currencyAmount = ingredient.count.takeIf { ingredient.kind == RecipeIngredientKind.CURRENCY }
-        val currencyStack = currencyAmount?.let { SkyBlockCurrencyStacks.supportedStack(ingredient.id, it) }
-        val stack = when {
-            petLevel != null -> SkyBlockDataRepository.ViewerData.petStack(ingredient.id, petLevel)?.withActionHint("SCROLL")
-            currencyStack != null -> currencyStack
-            else -> recipeIngredientStack(ingredient) ?: key?.let(SkyBlockDataRepository::displayStack)
+        val displayedIngredient = displayedOverride ?: displayedRecipeIngredient(ingredient)
+        val key = displayedIngredient.itemKey()
+        val petLevelKey = if (displayedIngredient.kind == RecipeIngredientKind.PET) {
+            recipePetLevelKey(recipe, displayedIngredient.id)
+        } else {
+            null
         }
+        val petLevel = petLevelKey?.let { petLevels.getOrPut(it) { 1 } }
+        val currencyAmount = displayedIngredient.count.takeIf { displayedIngredient.kind == RecipeIngredientKind.CURRENCY }
+        val currencyStack = currencyAmount?.let { SkyBlockCurrencyStacks.supportedStack(displayedIngredient.id, it) }
+        val baseStack = when {
+            petLevel != null -> SkyBlockDataRepository.ViewerData.petStack(displayedIngredient.id, petLevel)
+                ?.withActionHint("SCROLL")
+            currencyStack != null -> currencyStack
+            else -> recipeIngredientStack(displayedIngredient) ?: key?.let(SkyBlockDataRepository::displayStack)
+        }
+        val stack = if (isSelectable) baseStack?.withActionHint("SELECT") else baseStack
         if (stack != null) {
             context.item(stack, bounds.x + 1, bounds.y + 1)
             when {
                 petLevelKey != null ->
-                    petBounds += PetIngredientBounds(bounds, ingredient.id, petLevelKey)
+                    petBounds += PetIngredientBounds(bounds, displayedIngredient.id, petLevelKey)
                 currencyStack != null -> drawCurrencyAmount(context, font, bounds, requireNotNull(currencyAmount))
-                ingredient.count > 1 -> {
+                displayedIngredient.count > 1 -> {
                     context.itemDecorations(
                         font,
                         stack,
                         bounds.x + 1,
                         bounds.y + 1,
-                        ItemListFormatting.number(ingredient.count),
+                        ItemListFormatting.number(displayedIngredient.count),
                     )
                 }
             }
@@ -438,8 +495,13 @@ internal class ItemListViewerScreen(
                 }
             }
         } else {
-            val label = ingredient.displayName ?: ingredient.id.replace('_', ' ')
-            LegacyTextRenderer.draw(context, "§6${ItemListFormatting.number(ingredient.count)}", bounds.x + 2, bounds.y + 2)
+            val label = displayedIngredient.displayName ?: displayedIngredient.id.replace('_', ' ')
+            LegacyTextRenderer.draw(
+                context,
+                "§6${ItemListFormatting.number(displayedIngredient.count)}",
+                bounds.x + 2,
+                bounds.y + 2,
+            )
             if (bounds.contains(mouseX, mouseY)) context.setTooltipForNextFrame(font, Component.literal(label), mouseX, mouseY)
         }
         return key
@@ -804,6 +866,9 @@ private class ViewerSelection(
 
     fun currentCategories(): List<ViewerCategory> = buildList {
         currentRecipes().map(SkyBlockRecipe::type).distinct().forEach { add(ViewerCategory(recipeType = it)) }
+        if (mode == ItemListViewMode.RECIPES && hasObtainSourcesMatching(currentKey, SPECIALIZED_DETAIL_MARKERS)) {
+            add(ViewerCategory(supplemental = ViewerSupplementalCategory.HUNTING))
+        }
         if (mode == ItemListViewMode.RECIPES && hasOtherObtainSources(currentKey)) {
             add(ViewerCategory(supplemental = ViewerSupplementalCategory.SOURCES))
         }
@@ -886,12 +951,14 @@ private data class ViewerCategory(
 
 private enum class ViewerSupplementalCategory(val label: String) {
     SOURCES("Sources"),
+    HUNTING("Hunting"),
     BAZAAR("Bazaar"),
 }
 
 private fun hasObtainMethods(key: ItemListEntryKey): Boolean =
     SkyBlockDataRepository.recipesFor(key).isNotEmpty() ||
         hasOtherObtainSources(key) ||
+        hasObtainSourcesMatching(key, SPECIALIZED_DETAIL_MARKERS) ||
         hasBazaarObtainSource(key)
 
 private data class PetIngredientBounds(

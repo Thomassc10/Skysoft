@@ -46,10 +46,12 @@ internal object ItemListNpcWaypoint {
         val target = resolveNpcWarp(entityId) ?: return NpcWarpRequestResult.REJECTED
         val now = System.currentTimeMillis()
         if (HypixelLocationState.currentIsland == target.island) {
-            pendingWarp = null
-            warpFailures.remove(entityId)
-            activeWaypoint = NpcWaypoint(entityId, target.island, target.position, now)
-            return NpcWarpRequestResult.WAYPOINT_ACTIVATED
+            return target.position?.let { position ->
+                pendingWarp = null
+                warpFailures.remove(entityId)
+                activeWaypoint = NpcWaypoint(entityId, target.island, position, now)
+                NpcWarpRequestResult.WAYPOINT_ACTIVATED
+            } ?: NpcWarpRequestResult.REJECTED
         }
         connection.sendCommand("warp ${target.warp.command}")
         pendingWarp = PendingNpcWarp(
@@ -67,11 +69,10 @@ internal object ItemListNpcWaypoint {
     }
 
     private fun resolveNpcWarp(entityId: String): ResolvedNpcWarp? {
-        val entity = SkyBlockDataRepository.entity(entityId)?.takeIf(SkyBlockEntityInfo::isWarpableNpc) ?: return null
+        val entity = SkyBlockDataRepository.entity(entityId)?.takeIf(SkyBlockEntityInfo::canNavigateToEntity) ?: return null
         val island = entity.island ?: return null
-        val position = entity.position ?: return null
         val warp = SkyBlockDataRepository.ViewerData.bestWarpFor(entityId) ?: return null
-        return ResolvedNpcWarp(island, position, warp)
+        return ResolvedNpcWarp(island, entity.position, warp)
     }
 
     private fun tick() {
@@ -94,12 +95,14 @@ internal object ItemListNpcWaypoint {
                     playerPosition,
                     pending.warp.position,
                 ) -> {
-                    activeWaypoint = NpcWaypoint(
-                        entityId = pending.entityId,
-                        island = pending.island,
-                        target = pending.target,
-                        createdAtMillis = now,
-                    )
+                    activeWaypoint = pending.target?.let { target ->
+                        NpcWaypoint(
+                            entityId = pending.entityId,
+                            island = pending.island,
+                            target = target,
+                            createdAtMillis = now,
+                        )
+                    }
                     pendingWarp = null
                 }
             }
@@ -164,7 +167,7 @@ internal object ItemListNpcWaypoint {
     private data class PendingNpcWarp(
         val entityId: String,
         val island: SkyBlockIsland,
-        val target: WorldVec,
+        val target: WorldVec?,
         val warp: SkyBlockWarpPoint,
         val startingIsland: SkyBlockIsland?,
         val startingLocationVersion: Long,
@@ -174,7 +177,7 @@ internal object ItemListNpcWaypoint {
 
     private data class ResolvedNpcWarp(
         val island: SkyBlockIsland,
-        val position: WorldVec,
+        val position: WorldVec?,
         val warp: SkyBlockWarpPoint,
     )
 

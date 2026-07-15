@@ -236,6 +236,7 @@ data class SkyBlockWikiLinks(
 )
 
 enum class SkyBlockRecipeType(val displayName: String) {
+    ATTRIBUTE_FUSION("Fusions"),
     CRAFTING("Crafting"),
     FORGE("Forge"),
     KAT("Kat"),
@@ -265,6 +266,12 @@ data class RecipeIngredient(
     val count: Long = 1L,
     val kind: RecipeIngredientKind = RecipeIngredientKind.ITEM,
     val displayName: String? = null,
+    val alternatives: List<RecipeIngredientOption> = emptyList(),
+)
+
+data class RecipeIngredientOption(
+    val id: String,
+    val count: Long = 1L,
 )
 
 sealed interface SkyBlockRecipe {
