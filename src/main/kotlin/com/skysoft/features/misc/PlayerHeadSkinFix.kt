@@ -47,7 +47,7 @@ object PlayerHeadSkinFix {
             slotStacks[slot] = stack.copy()
             stack
         } else {
-            slotStacks[slot]?.copy()
+            slotStacks[slot]?.copy() ?: stack
         }
     }
 
