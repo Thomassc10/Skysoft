@@ -12,6 +12,8 @@ import com.skysoft.data.skyblock.ItemListTierFamily
 import com.skysoft.data.skyblock.ItemListTierFamilyKind
 import com.skysoft.data.skyblock.SkyBlockDataLoadState
 import com.skysoft.data.skyblock.SkyBlockDataRepository
+import com.skysoft.features.inventory.ContainerSearchHighlighter
+import com.skysoft.features.inventory.InventoryItemSearchHighlight
 import com.skysoft.features.inventory.StorageOverlayController
 import com.skysoft.gui.HudEditorElement
 import com.skysoft.gui.HudEditorRegistry
@@ -317,6 +319,9 @@ object ItemListController {
             layout.search.height,
             "Search items...",
             alpha = footerOpacity,
+            outlineColor = InventoryItemSearchHighlight.OUTLINE_COLOR.takeIf {
+                ContainerSearchHighlighter.isActive(screen)
+            },
         )
         if (layout.config?.contains(mouseX, mouseY) == true) {
             context.setTooltipForNextFrame(
@@ -329,7 +334,11 @@ object ItemListController {
     }
 
     @JvmStatic
-    fun handleMouseClick(screen: AbstractContainerScreen<*>, click: MouseButtonEvent): InputHandlingResult {
+    fun handleMouseClick(
+        screen: AbstractContainerScreen<*>,
+        click: MouseButtonEvent,
+        doubled: Boolean,
+    ): InputHandlingResult {
         if (!isVisible(screen)) return InputHandlingResult.IGNORED
         val layout = lastLayout ?: return InputHandlingResult.IGNORED
         val mouseX = click.x().toInt()
@@ -339,12 +348,13 @@ object ItemListController {
             return InputHandlingResult.IGNORED
         }
         if (!layout.search.contains(mouseX, mouseY)) searchField.focused = false
-        return processPanelClick(screen, click, layout, mouseX, mouseY)
+        return processPanelClick(screen, click, doubled, layout, mouseX, mouseY)
     }
 
     private fun processPanelClick(
         screen: AbstractContainerScreen<*>,
         click: MouseButtonEvent,
+        doubled: Boolean,
         layout: ItemListLayout,
         mouseX: Int,
         mouseY: Int,
@@ -358,6 +368,19 @@ object ItemListController {
             }
             layout.search.contains(mouseX, mouseY) -> {
                 searchField.focused = true
+                when {
+                    click.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT &&
+                        SkysoftConfigGui.config().inventory.itemList.sources.isRightClickClearEnabled -> {
+                        searchField.text = ""
+                        updateSearch(screen, "")
+                        ContainerSearchHighlighter.clear(screen)
+                    }
+                    click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT && doubled &&
+                        (ContainerSearchHighlighter.isActive(screen) || searchField.text.isNotBlank()) -> {
+                        ContainerSearchHighlighter.toggle(screen, searchField.text)
+                        SoundUtilities.playClickSound()
+                    }
+                }
             }
             layout.config?.contains(mouseX, mouseY) == true && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT -> {
                 SoundUtilities.playClickSound()
@@ -420,7 +443,7 @@ object ItemListController {
             } else {
                 val before = searchField.text
                 searchField.keyPressed(event)
-                if (before != searchField.text) updateSearch(searchField.text)
+                if (before != searchField.text) updateSearch(screen, searchField.text)
                 InputHandlingResult.CONSUMED
             }
         }
@@ -448,7 +471,7 @@ object ItemListController {
     fun handleCharTyped(screen: AbstractContainerScreen<*>, event: CharacterEvent): InputHandlingResult {
         if (!isVisible(screen) || !searchField.focused || !event.isAllowedChatCharacter) return InputHandlingResult.IGNORED
         searchField.charTyped(event)
-        updateSearch(searchField.text)
+        updateSearch(screen, searchField.text)
         return InputHandlingResult.CONSUMED
     }
 
@@ -612,10 +635,11 @@ object ItemListController {
         MinecraftClient.setScreen(ItemListViewerScreen(parent, key))
     }
 
-    private fun updateSearch(value: String) {
+    private fun updateSearch(screen: AbstractContainerScreen<*>, value: String) {
         ItemListState.search = value
         ItemListState.page = 0
         tierDropdown.clear()
+        ContainerSearchHighlighter.update(screen, value)
     }
 
     private fun clearFrameState() {

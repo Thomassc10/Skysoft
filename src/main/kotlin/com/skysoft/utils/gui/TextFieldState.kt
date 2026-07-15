@@ -22,6 +22,7 @@ internal class TextFieldState(var text: String = "", val maxLength: Int = 256) {
         placeholder: String,
         prefix: String = "",
         alpha: Double = 1.0,
+        outlineColor: Int? = null,
     ) {
         context.fill(x, y, x + width, y + height, BACKGROUND_COLOR.withScaledAlpha(alpha))
         context.outline(
@@ -29,7 +30,7 @@ internal class TextFieldState(var text: String = "", val maxLength: Int = 256) {
             y,
             width,
             height,
-            (if (focused) FOCUSED_OUTLINE_COLOR else OUTLINE_COLOR).withScaledAlpha(alpha),
+            (outlineColor ?: if (focused) FOCUSED_OUTLINE_COLOR else OUTLINE_COLOR).withScaledAlpha(alpha),
         )
         val displayText = if (text.isEmpty() && !focused) "§8$placeholder" else "§f$prefix$text"
         LegacyTextRenderer.draw(

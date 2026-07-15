@@ -112,7 +112,6 @@ internal object StorageColors {
     val PAGE_PANEL_OUTLINE = 0xFF404040.toInt()
     val TITLE_EDIT_BACKGROUND = 0xA0080808.toInt()
     val TEXT_WHITE = 0xFFFFFFFF.toInt()
-    const val SEARCH_MATCH = 0x6030FF30
     val SCROLLBAR_TRACK = 0xFF242424.toInt()
     val SCROLLBAR_OUTLINE = 0xFF383838.toInt()
     val SCROLLBAR_KNOB = 0xFF808080.toInt()

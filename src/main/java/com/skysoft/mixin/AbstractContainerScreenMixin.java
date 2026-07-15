@@ -3,6 +3,7 @@ package com.skysoft.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.skysoft.features.bazaar.BazaarTracker;
+import com.skysoft.features.inventory.ContainerSearchHighlighter;
 import com.skysoft.features.inventory.InventoryButtonManager;
 import com.skysoft.features.inventory.InventoryEquipment;
 import com.skysoft.features.inventory.InventoryDropSelectionGuard;
@@ -116,7 +117,9 @@ public class AbstractContainerScreenMixin {
         boolean doubled,
         CallbackInfoReturnable<Boolean> cir
     ) {
-        if (ItemListController.handleMouseClick((AbstractContainerScreen<?>) (Object) this, click) == InputHandlingResult.CONSUMED) {
+        if (ItemListController.handleMouseClick((AbstractContainerScreen<?>) (Object) this, click, doubled)
+            == InputHandlingResult.CONSUMED
+        ) {
             cir.setReturnValue(true);
             return;
         }
@@ -330,6 +333,7 @@ public class AbstractContainerScreenMixin {
         int mouseY,
         CallbackInfo ci
     ) {
+        ContainerSearchHighlighter.renderBackground((AbstractContainerScreen<?>) (Object) this, context, slot);
         ActivePetHighlighter.renderBackground((AbstractContainerScreen<?>) (Object) this, context, slot);
         BazaarTracker.renderSlotIndicatorBackground((AbstractContainerScreen<?>) (Object) this, context, slot);
     }

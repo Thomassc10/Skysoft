@@ -154,13 +154,7 @@ internal fun drawPage(
                 StorageSearchIndex.hasQuery &&
                 (if (active) StorageSearchIndex.matches(stack) else StorageSearchIndex.matches(storedItem))
             ) {
-                context.fill(
-                    slotX - StorageSlots.BORDER,
-                    slotY - StorageSlots.BORDER,
-                    slotX + StorageSlots.SIZE - StorageSlots.BORDER,
-                    slotY + StorageSlots.SIZE - StorageSlots.BORDER,
-                    StorageColors.SEARCH_MATCH,
-                )
+                InventoryItemSearchHighlight.render(context, slotX, slotY)
             }
             context.itemWithDecorations(stack, slotX, slotY)
         }

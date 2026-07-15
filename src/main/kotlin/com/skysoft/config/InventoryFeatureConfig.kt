@@ -248,6 +248,12 @@ class ItemListSourcesConfig {
 
     @JvmField
     @field:Expose
+    @field:ConfigOption(name = "Right-Click Clear", desc = "Clear Item List search by right-clicking the search bar.")
+    @field:ConfigEditorBoolean
+    var isRightClickClearEnabled = true
+
+    @JvmField
+    @field:Expose
     var bazaarGraphMode = "PRICE_HISTORY"
 
     @JvmField
