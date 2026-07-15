@@ -145,7 +145,10 @@ internal object SkyBlockAuxiliaryDataLoader {
             val page = value.string("page")
             val revision = value.get("revision")?.asLong ?: -1L
             val sourceItemId = value.string("sourceItem").takeIf(String::isNotBlank)
-            require(summary.isNotBlank() && summary.length <= ObtainSchema.MAXIMUM_SUMMARY_LENGTH) {
+            require(
+                summary.isNotBlank() && summary.length <= ObtainSchema.MAXIMUM_SUMMARY_LENGTH &&
+                    !ObtainSchema.RAW_WIKI_MARKUP.containsMatchIn(summary),
+            ) {
                 "Item List obtain source $id has an invalid summary"
             }
             require(page.length <= SharedLimits.MAXIMUM_TEXT_LENGTH && revision >= 0L) {
@@ -274,6 +277,11 @@ internal object SkyBlockAuxiliaryDataLoader {
         const val MINIMUM_SOURCE_COUNT = 4
         const val MAXIMUM_SUMMARY_LENGTH = 600
         val SIZE_RANGE = 500_000..4_000_000
+        val RAW_WIKI_MARKUP = Regex(
+            """(?:\{\||\|\}|\{\{|\[\[|\]\]|wikitable|tabber|^\s*\|[a-z][\w.-]*\s*=|""" +
+                """(?:^|\s)(?:class|rowspan|colspan|style)\s*=|={2,}\s*[^=]+\s*={2,}|\|-\|)""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
+        )
     }
 
     private object EntityContextSchema {
