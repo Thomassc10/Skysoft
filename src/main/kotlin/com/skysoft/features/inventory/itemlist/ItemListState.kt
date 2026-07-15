@@ -9,7 +9,6 @@ internal object ItemListState {
     var search = ""
     var page = 0
     var isTemporarilyHidden = false
-    var conflictNoticeShown = false
 
     private val config: ItemListConfig get() = SkysoftConfigGui.config().inventory.itemList
 
@@ -18,7 +17,6 @@ internal object ItemListState {
             search = ""
             page = 0
             isTemporarilyHidden = false
-            conflictNoticeShown = false
         }
     }
 

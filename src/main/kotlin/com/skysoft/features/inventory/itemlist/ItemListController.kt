@@ -14,7 +14,6 @@ import com.skysoft.gui.HudEditorElement
 import com.skysoft.gui.HudEditorRegistry
 import com.skysoft.utils.MinecraftClient
 import com.skysoft.utils.SmoothFloatTransition
-import com.skysoft.utils.SkysoftChat
 import com.skysoft.utils.SoundUtilities
 import com.skysoft.utils.gui.PixelButtonRenderer
 import com.skysoft.utils.gui.Rect
@@ -22,7 +21,6 @@ import com.skysoft.utils.gui.TextFieldState
 import com.skysoft.utils.input.InputHandlingResult
 import com.skysoft.utils.render.LegacyTextRenderer
 import com.skysoft.utils.ColorUtilities.withScaledAlpha
-import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -42,7 +40,6 @@ object ItemListController {
     private val tierDropdown = ItemListTierDropdownState()
     private var filterKey: ItemFilterKey? = null
     private var filteredEntryCache: List<ItemListEntry> = emptyList()
-    private val hasRei: Boolean by lazy { FabricLoader.getInstance().isModLoaded(REI_MOD_ID) }
     private val footerAlpha = SmoothFloatTransition(
         FooterPresentation.IDLE_ALPHA.toFloat(),
         FooterPresentation.FADE_DURATION_NANOS,
@@ -81,7 +78,6 @@ object ItemListController {
 
     @JvmStatic
     fun render(screen: AbstractContainerScreen<*>, context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
-        announceConflictIfNeeded()
         if (!isVisible(screen)) {
             clearFrameState()
             return
@@ -259,7 +255,7 @@ object ItemListController {
                 InputHandlingResult.CONSUMED
             }
         }
-        if (event.key() == config.settings.visibilityKey && config.enabled && HypixelLocationState.onHypixel && !hasRei) {
+        if (event.key() == config.settings.visibilityKey && config.enabled && HypixelLocationState.onHypixel) {
             ItemListState.isTemporarilyHidden = !ItemListState.isTemporarilyHidden
             searchField.focused = false
             return InputHandlingResult.CONSUMED
@@ -299,7 +295,6 @@ object ItemListController {
         val config = SkysoftConfigGui.config().inventory.itemList
         return config.enabled &&
             HypixelLocationState.onHypixel &&
-            !hasRei &&
             !ItemListState.isTemporarilyHidden &&
             !StorageOverlayController.isActive(screen)
     }
@@ -444,20 +439,12 @@ object ItemListController {
         tierDropdown.clear()
     }
 
-    private fun announceConflictIfNeeded() {
-        val config = SkysoftConfigGui.config().inventory.itemList
-        if (!config.enabled || !HypixelLocationState.onHypixel || !hasRei || ItemListState.conflictNoticeShown) return
-        ItemListState.conflictNoticeShown = true
-        SkysoftChat.chat("Item List is disabled while Roughly Enough Items is installed.")
-    }
-
     private fun clearFrameState() {
         hoveredKey = null
         lastLayout = null
         lastEntries = emptyList()
     }
 
-    private const val REI_MOD_ID = "roughlyenoughitems"
     private const val NO_ROOM_TEXT_WIDTH = 115
     private const val NO_ROOM_TEXT_BOTTOM = 14
     private const val EMPTY_TEXT_X_OFFSET = 4

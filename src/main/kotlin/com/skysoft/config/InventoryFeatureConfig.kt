@@ -15,7 +15,6 @@ import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorColour
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDropdown
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDraggableList
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorKeybind
-import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorInfoText
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorSlider
 import io.github.notenoughupdates.moulconfig.annotations.ConfigOption
 import io.github.notenoughupdates.moulconfig.observer.Property
@@ -148,11 +147,6 @@ class ItemListConfig {
 }
 
 class ItemListSettingsConfig {
-    @JvmField
-    @field:ConfigOption(name = "REI Compatibility", desc = "Disabled while Roughly Enough Items is loaded.")
-    @field:ConfigEditorInfoText
-    val reiCompatibility: Unit = Unit
-
     @JvmField
     @field:Expose
     @field:ConfigOption(name = "Visibility Key", desc = "Temporarily show or hide Item List.")
