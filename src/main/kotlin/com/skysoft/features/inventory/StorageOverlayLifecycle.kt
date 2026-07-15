@@ -3,6 +3,7 @@ package com.skysoft.features.inventory
 import com.skysoft.data.hypixel.SkyBlockProfileApi
 import com.skysoft.mixin.AbstractContainerScreenAccessor
 import com.skysoft.utils.gui.nonPlayerSlots
+import com.skysoft.utils.gui.textAfterDeletingPreviousWord
 import com.skysoft.utils.input.InputHandlingResult
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
@@ -332,7 +333,8 @@ internal fun handleStorageOverlayKeyPress(screen: AbstractContainerScreen<*>, ev
 
         GLFW.GLFW_KEY_BACKSPACE -> {
             if (searchText.isNotEmpty()) {
-                searchText = searchText.dropLast(1)
+                val control = event.modifiers() and GLFW.GLFW_MOD_CONTROL != 0
+                searchText = if (control) textAfterDeletingPreviousWord(searchText) else searchText.dropLast(1)
                 resetStorageScroll()
                 storageOverlayLayoutScreen(screen)
             }

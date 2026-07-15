@@ -57,7 +57,9 @@ internal class TextFieldState(var text: String = "", val maxLength: Int = 256) {
         val control = event.modifiers() and GLFW.GLFW_MOD_CONTROL != 0
         return when (event.key()) {
             GLFW.GLFW_KEY_BACKSPACE -> {
-                if (text.isNotEmpty()) text = text.dropLast(1)
+                if (text.isNotEmpty()) {
+                    text = if (control) textAfterDeletingPreviousWord(text) else text.dropLast(1)
+                }
                 InputHandlingResult.CONSUMED
             }
             GLFW.GLFW_KEY_DELETE -> {
@@ -109,4 +111,11 @@ internal class TextFieldState(var text: String = "", val maxLength: Int = 256) {
         val OUTLINE_COLOR = 0xFF505050.toInt()
         val TEXT_COLOR = 0xFFFFFFFF.toInt()
     }
+}
+
+internal fun textAfterDeletingPreviousWord(text: String): String {
+    val wordEnd = text.indexOfLast { !it.isWhitespace() } + 1
+    if (wordEnd == 0) return ""
+    val wordStart = text.substring(0, wordEnd).indexOfLast(Char::isWhitespace) + 1
+    return text.substring(0, wordStart)
 }
