@@ -18,7 +18,35 @@ public class ContainerScreenMixin {
         float delta,
         CallbackInfo ci
     ) {
-        if (StorageOverlayController.isActive((ContainerScreen) (Object) this)) {
+        if (
+            StorageOverlayController.isActive((ContainerScreen) (Object) this)
+                && !StorageOverlayController.shouldDimBackground()
+        ) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(
+        method = "extractBackground",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;"
+                + "extractBackground(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V",
+            shift = At.Shift.AFTER
+        ),
+        cancellable = true
+    )
+    private void skysoft$suppressStorageOverlayContainerBackground(
+        GuiGraphicsExtractor context,
+        int mouseX,
+        int mouseY,
+        float delta,
+        CallbackInfo ci
+    ) {
+        if (
+            StorageOverlayController.isActive((ContainerScreen) (Object) this)
+                && StorageOverlayController.shouldDimBackground()
+        ) {
             ci.cancel();
         }
     }

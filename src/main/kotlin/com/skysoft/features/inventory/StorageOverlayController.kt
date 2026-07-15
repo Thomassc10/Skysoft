@@ -22,6 +22,9 @@ object StorageOverlayController {
     fun isActive(screen: AbstractContainerScreen<*>?): Boolean = storageOverlayIsActive(screen)
 
     @JvmStatic
+    fun shouldDimBackground(): Boolean = config.details.dimBackground
+
+    @JvmStatic
     fun layoutScreen(screen: AbstractContainerScreen<*>) {
         storageOverlayLayoutScreen(screen)
     }

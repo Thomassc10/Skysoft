@@ -726,6 +726,12 @@ class StorageOverlaySettingsConfig {
 class StorageOverlayDetailsConfig {
     @JvmField
     @field:Expose
+    @field:ConfigOption(name = "Dim Background", desc = "Dim the world behind the storage overlay.")
+    @field:ConfigEditorBoolean
+    var dimBackground = true
+
+    @JvmField
+    @field:Expose
     @field:ConfigOption(name = "Columns", desc = "Storage pages shown per row.")
     @field:ConfigEditorSlider(minValue = 1f, maxValue = 5f, minStep = 1f)
     var columns = 3
