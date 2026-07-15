@@ -43,6 +43,14 @@ object StorageOverlayController {
         handleStorageOverlayMouseClick(screen, click)
 
     @JvmStatic
+    fun handleMouseDrag(screen: AbstractContainerScreen<*>, click: MouseButtonEvent): InputHandlingResult =
+        handleStorageOverlayMouseDrag(screen, click)
+
+    @JvmStatic
+    fun handleMouseRelease(click: MouseButtonEvent): InputHandlingResult =
+        handleStorageOverlayMouseRelease(click)
+
+    @JvmStatic
     fun handleMouseScroll(
         screen: AbstractContainerScreen<*>,
         mouseX: Double,
@@ -81,6 +89,7 @@ internal var editingTitleSelected = false
 internal var scroll = 0
 internal var scrollPosition = 0.0
 internal var scrollTarget = 0.0
+internal var scrollbarDragOffset: Int? = null
 internal var lastScrollUpdateNanos = 0L
 internal var lastCommandMillis = 0L
 internal var rememberedPageIndex: Int? = null

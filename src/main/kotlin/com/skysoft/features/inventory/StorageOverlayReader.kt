@@ -37,6 +37,7 @@ internal fun onClientTick() {
 internal fun resetScreenState() {
     restoreStorageOverlaySlots()
     pauseStorageScrollAnimation()
+    scrollbarDragOffset = null
     lastInventoryKey = null
     redirectedOverviewScreenId = null
     centeredPageKey = null

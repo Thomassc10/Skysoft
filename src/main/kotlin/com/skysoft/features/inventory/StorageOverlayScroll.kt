@@ -1,8 +1,13 @@
 package com.skysoft.features.inventory
 
+import com.skysoft.utils.gui.Rect
+import com.skysoft.utils.input.InputHandlingResult
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.roundToInt
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.client.input.MouseButtonEvent
+import org.lwjgl.glfw.GLFW
 
 internal fun centerPage(measurements: Measurements, layoutResult: PageLayoutResult, pageIndex: Int) {
     scrollTarget = centeredScrollForPage(scroll, measurements, layoutResult, pageIndex).toDouble()
@@ -24,6 +29,61 @@ internal fun centeredScrollForPage(
 internal fun moveStorageScrollTarget(delta: Double, maximum: Int) {
     advanceStorageScroll()
     scrollTarget = (scrollTarget + delta).coerceIn(0.0, maximum.coerceAtLeast(0).toDouble())
+}
+
+internal fun setStorageScrollFromScrollbar(
+    pointerY: Int,
+    dragOffset: Int,
+    bar: Rect,
+    knobHeight: Int,
+    maximum: Int,
+) {
+    val position = scrollbarScrollPosition(pointerY, dragOffset, bar, knobHeight, maximum)
+    scrollPosition = position
+    scrollTarget = position
+    scroll = position.roundToInt()
+}
+
+internal fun scrollbarScrollPosition(
+    pointerY: Int,
+    dragOffset: Int,
+    bar: Rect,
+    knobHeight: Int,
+    maximum: Int,
+): Double {
+    val knobTravel = (bar.height - knobHeight).coerceAtLeast(0)
+    val knobY = (pointerY - dragOffset - bar.y).coerceIn(0, knobTravel)
+    return if (knobTravel == 0) 0.0 else knobY.toDouble() / knobTravel * maximum
+}
+
+internal fun handleStorageOverlayMouseDrag(
+    screen: AbstractContainerScreen<*>,
+    click: MouseButtonEvent,
+): InputHandlingResult {
+    val dragOffset = scrollbarDragOffset ?: return InputHandlingResult.IGNORED
+    if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return InputHandlingResult.IGNORED
+    val layoutState = storageOverlayLayoutScreen(screen) ?: run {
+        scrollbarDragOffset = null
+        return InputHandlingResult.IGNORED
+    }
+    val measurements = layoutState.measurements
+    val contentHeight = layoutState.pageLayoutResult.contentHeight
+    setStorageScrollFromScrollbar(
+        click.y().toInt(),
+        dragOffset,
+        measurements.scrollbar,
+        scrollbarKnobHeight(measurements, contentHeight),
+        maxScroll(measurements, contentHeight),
+    )
+    return InputHandlingResult.CONSUMED
+}
+
+internal fun handleStorageOverlayMouseRelease(click: MouseButtonEvent): InputHandlingResult {
+    if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT || scrollbarDragOffset == null) {
+        return InputHandlingResult.IGNORED
+    }
+    scrollbarDragOffset = null
+    return InputHandlingResult.CONSUMED
 }
 
 internal fun advanceStorageScroll(nowNanos: Long = System.nanoTime()) {

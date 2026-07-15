@@ -138,11 +138,29 @@ public class AbstractContainerScreenMixin {
     }
 
     @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
-    private void skysoft$releaseInventoryButton(
+    private void skysoft$releaseOverlayInput(
         MouseButtonEvent click,
         CallbackInfoReturnable<Boolean> cir
     ) {
+        if (StorageOverlayController.handleMouseRelease(click) == InputHandlingResult.CONSUMED) {
+            cir.setReturnValue(true);
+            return;
+        }
         if (InventoryButtonManager.handleMouseRelease((AbstractContainerScreen<?>) (Object) this, click) == InputHandlingResult.CONSUMED) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
+    private void skysoft$dragStorageOverlay(
+        MouseButtonEvent click,
+        double deltaX,
+        double deltaY,
+        CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (StorageOverlayController.handleMouseDrag((AbstractContainerScreen<?>) (Object) this, click)
+            == InputHandlingResult.CONSUMED
+        ) {
             cir.setReturnValue(true);
         }
     }

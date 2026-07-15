@@ -158,6 +158,14 @@ internal fun handleStorageOverlayMouseClick(
     updateSearchFocusFromClick(measurements, mouseX, mouseY)
 
     return when {
+        click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT && measurements.scrollbar.contains(mouseX, mouseY) -> {
+            val maximum = maxScroll(measurements, pageLayoutResult.contentHeight)
+            val knob = scrollbarKnobBounds(measurements, pageLayoutResult.contentHeight)
+            val dragOffset = if (knob.contains(mouseX, mouseY)) mouseY - knob.y else knob.height / 2
+            scrollbarDragOffset = dragOffset
+            setStorageScrollFromScrollbar(mouseY, dragOffset, measurements.scrollbar, knob.height, maximum)
+            InputHandlingResult.CONSUMED
+        }
         pointInSearch(measurements, mouseX, mouseY) -> {
             searchFocused = true
             finishTitleEdit()
