@@ -9,6 +9,7 @@
     "BufferBuilderMixin",
     "ChatComponentMixin",
     "ChatScreenMixin",
+    "ClientTextTooltipAccessor",
     "ParticlePacketMixin",
     "ContainerScreenMixin",
     "CustomHeadLayerMixin",

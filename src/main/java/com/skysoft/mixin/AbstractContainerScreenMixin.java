@@ -16,7 +16,6 @@ import com.skysoft.features.inventory.itemlist.ItemListController;
 import com.skysoft.features.misc.PlayerHeadSkinFix;
 import com.skysoft.features.pets.ActivePetHighlighter;
 import com.skysoft.features.pets.PetStorageService;
-import com.skysoft.gui.tooltip.TooltipViewport;
 import com.skysoft.utils.input.InputHandlingResult;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -249,10 +248,6 @@ public class AbstractContainerScreenMixin {
         double verticalAmount,
         CallbackInfoReturnable<Boolean> cir
     ) {
-        if (TooltipViewport.onMouseScroll(horizontalAmount, verticalAmount)) {
-            cir.setReturnValue(true);
-            return;
-        }
         if (ItemListController.handleMouseScroll(
             (AbstractContainerScreen<?>) (Object) this,
             mouseX,

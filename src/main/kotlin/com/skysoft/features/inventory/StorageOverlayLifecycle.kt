@@ -300,6 +300,7 @@ internal fun handleStorageOverlayMouseScroll(
     mouseY: Double,
     scrollY: Double,
 ): InputHandlingResult {
+    if (scrollY == 0.0) return InputHandlingResult.IGNORED
     val layoutState = storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
     val measurements = layoutState.measurements
     if (!measurements.scrollPanel.contains(mouseX.toInt(), mouseY.toInt())) return InputHandlingResult.IGNORED

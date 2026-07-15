@@ -4,12 +4,16 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.Window;
 import com.skysoft.features.bazaar.BazaarTracker;
+import com.skysoft.features.inventory.StorageOverlayController;
 import com.skysoft.gui.scale.CursorController;
 import com.skysoft.gui.scale.GuiScaleController;
 import com.skysoft.gui.scale.InventoryCursorMemory;
+import com.skysoft.gui.tooltip.TooltipViewport;
 import com.skysoft.utils.MinecraftClient;
 import com.skysoft.utils.input.InputHandlingResult;
 import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonInfo;
 import org.objectweb.asm.Opcodes;
 import org.lwjgl.glfw.GLFW;
@@ -65,6 +69,36 @@ public class MouseHandlerMixin implements CursorController {
         ) {
             ci.cancel();
         }
+    }
+
+    @WrapOperation(
+        method = "onScroll",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/Screen;mouseScrolled(DDDD)Z"
+        )
+    )
+    private boolean skysoft$routeTooltipScroll(
+        Screen screen,
+        double mouseX,
+        double mouseY,
+        double horizontalAmount,
+        double verticalAmount,
+        Operation<Boolean> original
+    ) {
+        boolean overStorageScrollPanel = screen instanceof AbstractContainerScreen<?> container &&
+            StorageOverlayController.shouldPreferMouseScroll(container, mouseX, mouseY, verticalAmount);
+        if (overStorageScrollPanel) {
+            if (TooltipViewport.isStorageOverlayScrollKeyDown() &&
+                TooltipViewport.onStorageMouseScroll(horizontalAmount, verticalAmount)) {
+                return true;
+            }
+            return original.call(screen, mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+        if (TooltipViewport.onMouseScroll(horizontalAmount, verticalAmount)) {
+            return true;
+        }
+        return original.call(screen, mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @WrapOperation(

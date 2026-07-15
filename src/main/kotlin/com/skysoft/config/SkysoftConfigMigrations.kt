@@ -274,6 +274,7 @@ internal object SkysoftConfigMigrations {
     private val BAZAAR_DETAILS_FIELDS = listOf("showBackground", "flippingInfo", "visualIndicators")
     private val TOOLTIP_SCROLL_SETTINGS_FIELDS = listOf(
         "enableScrollWheel",
+        "storageOverlayTooltipKey",
         "enableWASD",
         "mouseScrollingSpeed",
         "keyboardScrollingSpeed",

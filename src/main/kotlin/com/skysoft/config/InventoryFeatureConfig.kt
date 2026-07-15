@@ -620,6 +620,15 @@ class TooltipScrollSettingsConfig {
 
     @JvmField
     @field:Expose
+    @field:ConfigOption(
+        name = "Storage Overlay Tooltip Key",
+        desc = "Hold this key to scroll a tooltip instead of the Storage Overlay.",
+    )
+    @field:ConfigEditorKeybind(defaultKey = GLFW.GLFW_KEY_LEFT_SHIFT)
+    var storageOverlayTooltipKey = GLFW.GLFW_KEY_LEFT_SHIFT
+
+    @JvmField
+    @field:Expose
     @field:ConfigOption(name = "Enable WASD", desc = "Use WASD to move the hovered tooltip.")
     @field:ConfigEditorBoolean
     var enableWASD = false

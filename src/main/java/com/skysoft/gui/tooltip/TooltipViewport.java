@@ -2,15 +2,15 @@ package com.skysoft.gui.tooltip;
 
 import com.skysoft.config.SkysoftConfigGui;
 import com.skysoft.config.TooltipScrollConfig;
-import com.skysoft.features.inventory.StorageOverlayController;
+import com.skysoft.mixin.ClientTextTooltipAccessor;
 import com.skysoft.utils.MinecraftClient;
 import com.skysoft.utils.input.InputUtilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
+import net.minecraft.util.FormattedCharSequence;
 import org.joml.Vector2i;
 import org.joml.Vector2ic;
 import org.lwjgl.glfw.GLFW;
@@ -36,24 +36,31 @@ public final class TooltipViewport {
         int anchorY,
         ClientTooltipPositioner original
     ) {
-        if (isBlocked() || !config().enabled || components.isEmpty()) {
-            if (isBlocked()) clear();
+        if (!config().enabled || components.isEmpty()) {
             return original;
         }
         return new OffsetPositioner(original, tooltipIdentity(font, components), anchorX, anchorY);
     }
 
     public static boolean onMouseScroll(double horizontal, double vertical) {
+        return onMouseScroll(horizontal, vertical, GLFW.GLFW_KEY_UNKNOWN);
+    }
+
+    public static boolean onStorageMouseScroll(double horizontal, double vertical) {
+        return onMouseScroll(horizontal, vertical, config().settings.storageOverlayTooltipKey);
+    }
+
+    public static boolean isStorageOverlayScrollKeyDown() {
+        return isKeyDown(config().settings.storageOverlayTooltipKey);
+    }
+
+    private static boolean onMouseScroll(double horizontal, double vertical, int ignoredHorizontalKey) {
         TooltipScrollConfig settings = config();
-        if (isBlocked()) {
-            clear();
-            return false;
-        }
         if (!settings.enabled || !settings.settings.enableScrollWheel || !hasVisibleSession()) {
             return false;
         }
 
-        boolean pansHorizontally = horizontal != 0.0D || isHorizontalModifierDown(settings);
+        boolean pansHorizontally = horizontal != 0.0D || isHorizontalModifierDown(settings, ignoredHorizontalKey);
         double x = horizontal * settings.settings.mouseScrollingSpeed;
         double y = 0.0D;
         if (vertical != 0.0D) {
@@ -70,7 +77,7 @@ public final class TooltipViewport {
 
     public static void updateKeyboardPan() {
         TooltipScrollConfig settings = config();
-        if (isBlocked() || !settings.enabled) {
+        if (!settings.enabled) {
             clear();
             return;
         }
@@ -154,14 +161,16 @@ public final class TooltipViewport {
             now - session.lastObservedNanos <= VISIBILITY_GRACE_NANOS;
     }
 
-    private static boolean isBlocked() {
-        Screen screen = MinecraftClient.screen(MINECRAFT);
-        return screen instanceof AbstractContainerScreen<?> container && StorageOverlayController.isActive(container);
+    private static boolean isHorizontalModifierDown(TooltipScrollConfig settings) {
+        return isHorizontalModifierDown(settings, GLFW.GLFW_KEY_UNKNOWN);
     }
 
-    private static boolean isHorizontalModifierDown(TooltipScrollConfig settings) {
-        return settings.details.useLeftShift && isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) ||
+    private static boolean isHorizontalModifierDown(TooltipScrollConfig settings, int ignoredKey) {
+        boolean usesLeftShift = settings.details.useLeftShift && ignoredKey != GLFW.GLFW_KEY_LEFT_SHIFT &&
+            isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT);
+        boolean usesConfiguredKey = settings.settings.horizontalMovementKey != ignoredKey &&
             isKeyDown(settings.settings.horizontalMovementKey);
+        return usesLeftShift || usesConfiguredKey;
     }
 
     private static boolean isKeyDown(int key) {
@@ -174,8 +183,21 @@ public final class TooltipViewport {
             result = 31 * result + component.getClass().hashCode();
             result = 31 * result + component.getWidth(font);
             result = 31 * result + component.getHeight(font);
+            if (component instanceof ClientTextTooltipAccessor textTooltip) {
+                result = 31 * result + textIdentity(textTooltip.skysoft$getText());
+            }
         }
         return result;
+    }
+
+    private static int textIdentity(FormattedCharSequence text) {
+        int[] result = {1};
+        text.accept((index, style, codePoint) -> {
+            result[0] = 31 * result[0] + codePoint;
+            result[0] = 31 * result[0] + style.hashCode();
+            return true;
+        });
+        return result[0];
     }
 
     private static TooltipScrollConfig config() {

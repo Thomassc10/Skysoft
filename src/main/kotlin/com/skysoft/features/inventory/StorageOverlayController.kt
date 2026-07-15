@@ -63,6 +63,14 @@ object StorageOverlayController {
         handleStorageOverlayMouseScroll(screen, mouseX, mouseY, scrollY)
 
     @JvmStatic
+    fun shouldPreferMouseScroll(
+        screen: AbstractContainerScreen<*>,
+        mouseX: Double,
+        mouseY: Double,
+        scrollY: Double,
+    ): Boolean = shouldPreferStorageOverlayMouseScroll(screen, mouseX, mouseY, scrollY)
+
+    @JvmStatic
     fun handleKeyPress(screen: AbstractContainerScreen<*>, event: KeyEvent): InputHandlingResult =
         handleStorageOverlayKeyPress(screen, event)
 

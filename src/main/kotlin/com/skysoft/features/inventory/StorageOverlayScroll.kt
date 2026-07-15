@@ -86,6 +86,27 @@ internal fun handleStorageOverlayMouseRelease(click: MouseButtonEvent): InputHan
     return InputHandlingResult.CONSUMED
 }
 
+internal fun shouldPreferStorageOverlayMouseScroll(
+    screen: AbstractContainerScreen<*>,
+    mouseX: Double,
+    mouseY: Double,
+    scrollY: Double,
+): Boolean = shouldPreferStorageOverlayMouseScroll(
+    storageOverlayIsActive(screen),
+    measurements(screen.width, screen.height).scrollPanel,
+    mouseX,
+    mouseY,
+    scrollY,
+)
+
+internal fun shouldPreferStorageOverlayMouseScroll(
+    isActive: Boolean,
+    scrollPanel: Rect,
+    mouseX: Double,
+    mouseY: Double,
+    scrollY: Double,
+): Boolean = isActive && scrollY != 0.0 && scrollPanel.contains(mouseX.toInt(), mouseY.toInt())
+
 internal fun advanceStorageScroll(nowNanos: Long = System.nanoTime()) {
     if (lastScrollUpdateNanos == 0L) {
         lastScrollUpdateNanos = nowNanos
