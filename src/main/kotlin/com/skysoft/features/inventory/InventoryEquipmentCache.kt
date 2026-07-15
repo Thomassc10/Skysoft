@@ -12,18 +12,18 @@ import java.util.Locale
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.item.ItemStack
 
-internal var lastStatsInventoryKey: String? = null
+internal var lastEquipmentInventoryKey: String? = null
 
-internal fun readInventoryEquipmentStatsScreen(screen: AbstractContainerScreen<*>): ChangeResult {
+internal fun readInventoryEquipmentScreen(screen: AbstractContainerScreen<*>): ChangeResult {
     val inventoryName = screen.title.cleanSkyBlockText()
-    if (inventoryName != InventoryEquipmentMenu.STATS_TITLE) {
-        lastStatsInventoryKey = null
+    if (!isInventoryEquipmentMenuName(inventoryName)) {
+        lastEquipmentInventoryKey = null
         return ChangeResult.UNCHANGED
     }
 
     val key = screen.nonPlayerInventoryKey(inventoryName)
-    if (key == lastStatsInventoryKey) return ChangeResult.UNCHANGED
-    lastStatsInventoryKey = key
+    if (key == lastEquipmentInventoryKey) return ChangeResult.UNCHANGED
+    lastEquipmentInventoryKey = key
 
     val items = selectEquipmentMenuItems(
         screen.nonPlayerSlots().map { slot ->
@@ -54,10 +54,10 @@ internal fun <T> selectEquipmentMenuItems(
 ): List<T> {
     val result = ArrayList<T>(ProfileStorage.INVENTORY_EQUIPMENT_SLOT_COUNT)
     for (cell in cells.sortedBy(EquipmentMenuCell<T>::index)) {
-        if (cell.index % InventoryEquipmentMenu.COLUMNS != InventoryEquipmentMenu.EQUIPMENT_COLUMN || cell.isFiller) {
-            continue
-        }
-        result += if (cell.cleanName.isEmptyEquipmentPlaceholder()) emptyItem else cell.item
+        if (cell.index % InventoryEquipmentMenu.COLUMNS != InventoryEquipmentMenu.EQUIPMENT_COLUMN) continue
+        val isEmptyPlaceholder = cell.cleanName.isEmptyEquipmentPlaceholder()
+        if (cell.isFiller && !isEmptyPlaceholder) continue
+        result += if (isEmptyPlaceholder) emptyItem else cell.item
         if (result.size == ProfileStorage.INVENTORY_EQUIPMENT_SLOT_COUNT) break
     }
     return result
@@ -69,6 +69,9 @@ internal data class EquipmentMenuCell<T>(
     val cleanName: String,
     val isFiller: Boolean,
 )
+
+internal fun isInventoryEquipmentMenuName(name: String): Boolean =
+    name == InventoryEquipmentMenu.STATS_TITLE || loadoutMenuPattern.matches(name)
 
 private fun updateInventoryEquipmentStorage(items: List<ProfileStorage.SkyBlockStorageItemData>): ChangeResult {
     val storageItems = inventoryEquipmentStorage
@@ -89,3 +92,5 @@ private object InventoryEquipmentMenu {
     const val COLUMNS = 9
     const val EQUIPMENT_COLUMN = 1
 }
+
+private val loadoutMenuPattern = Regex("""^\([0-9]+/[0-9]+\) Loadouts$""")

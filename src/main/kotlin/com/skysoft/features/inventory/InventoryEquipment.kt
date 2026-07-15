@@ -57,18 +57,18 @@ internal fun isInventoryEquipmentAvailable(): Boolean =
     inventoryEquipmentConfig.enabled && HypixelLocationState.inSkyBlock
 
 internal fun resetInventoryEquipmentRuntimeState() {
-    lastStatsInventoryKey = null
+    lastEquipmentInventoryKey = null
     restoreAllInventoryEquipmentSlotLayouts()
 }
 
 private fun tickInventoryEquipment() {
     if (!isInventoryEquipmentAvailable()) {
-        lastStatsInventoryKey = null
+        lastEquipmentInventoryKey = null
         return
     }
     val screen = MinecraftClient.screen() as? AbstractContainerScreen<*> ?: run {
-        lastStatsInventoryKey = null
+        lastEquipmentInventoryKey = null
         return
     }
-    readInventoryEquipmentStatsScreen(screen)
+    readInventoryEquipmentScreen(screen)
 }
