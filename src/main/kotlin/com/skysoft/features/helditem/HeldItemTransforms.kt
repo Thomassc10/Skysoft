@@ -1,18 +1,17 @@
 package com.skysoft.features.helditem
 
+import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import com.skysoft.config.HeldItemTransformConfig
 import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.data.skyblock.SkyBlockItemId.skyBlockId
-import com.skysoft.mixin.GameRendererAccessor
 import kotlin.math.tan
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.core.component.DataComponents
 import net.minecraft.world.item.ItemStack
 import org.joml.Matrix4f
-import org.joml.Quaternionf
-import org.joml.Quaternionfc
+import org.joml.Matrix4fc
 
 object HeldItemTransforms {
     private var newestCustomData: Any? = null
@@ -27,8 +26,7 @@ object HeldItemTransforms {
         val transform = effectiveTransform(itemStack)
         if (!transform.hasRenderChanges()) return
 
-        val camera = (Minecraft.getInstance().gameRenderer as GameRendererAccessor).`skysoft$getMainCamera`()
-        applyPosition(poseStack, transform, camera.rotation())
+        applyPosition(poseStack, transform, RenderSystem.getModelViewStack())
         if (transform.scale != 1f) poseStack.scale(transform.scale, transform.scale, transform.scale)
     }
 
@@ -62,17 +60,17 @@ object HeldItemTransforms {
     internal fun applyPosition(
         poseStack: PoseStack,
         transform: HeldItemTransformConfig,
-        cameraRotation: Quaternionfc,
+        viewTransform: Matrix4fc,
     ) {
         val referenceDepth = HeldItemPositionMath.referenceDepth(transform.z)
         val screenTransform = Matrix4f()
             .m20(-transform.x / referenceDepth)
             .m21(-transform.y / referenceDepth)
             .translate(0f, 0f, transform.z)
-        val cameraSpaceTransform = Matrix4f()
-            .rotation(cameraRotation)
+        val cameraSpaceTransform = Matrix4f(viewTransform)
+            .invert()
             .mul(screenTransform)
-            .rotate(Quaternionf(cameraRotation).conjugate())
+            .mul(viewTransform)
         poseStack.last().pose().mulLocal(cameraSpaceTransform)
     }
 }
