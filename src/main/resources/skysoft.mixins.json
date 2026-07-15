@@ -20,6 +20,7 @@
     "GuiMixin",
     "GuiMessageLineMixin",
     "TooltipGuiScaleMixin",
+    "TooltipRenderUtilMixin",
     "OverlayMessageAccessor",
     "GuiGraphicsExtractorAccessor",
     "GuiGraphicsExtractorMixin",

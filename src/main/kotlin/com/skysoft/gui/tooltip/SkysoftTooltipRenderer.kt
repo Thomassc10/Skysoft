@@ -1,5 +1,6 @@
 package com.skysoft.gui.tooltip
 
+import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.gui.scale.GuiScaleController
 import com.skysoft.utils.MinecraftClient
 import com.skysoft.utils.render.LegacyTextRenderer
@@ -9,6 +10,7 @@ import kotlin.math.roundToInt
 
 object SkysoftTooltipRenderer {
     private const val BACKGROUND = 0xE0101010.toInt()
+    private const val SOLID_BACKGROUND = 0xFF101010.toInt()
     private const val BORDER = 0x80505050.toInt()
     private const val TEXT_COLOR = 0xFFE0E0E0.toInt()
     private const val SCREEN_MARGIN = 4
@@ -29,7 +31,13 @@ object SkysoftTooltipRenderer {
         val top = clampedY - PADDING_TOP
         val right = clampedX + width + PADDING_X
         val bottom = clampedY + height
-        context.fill(left, top, right, bottom, BACKGROUND)
+        context.fill(
+            left,
+            top,
+            right,
+            bottom,
+            if (SkysoftConfigGui.config().misc.solidTooltipBackground) SOLID_BACKGROUND else BACKGROUND,
+        )
         context.outline(left, top, right - left, bottom - top, BORDER)
         lines.forEachIndexed { index, line ->
             LegacyTextRenderer.draw(context, line, clampedX, clampedY + index * LINE_HEIGHT, shadow = false, defaultColor = TEXT_COLOR)

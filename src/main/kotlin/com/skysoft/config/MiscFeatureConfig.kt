@@ -41,6 +41,12 @@ class MiscFeatureConfig {
 
     @JvmField
     @field:Expose
+    @field:ConfigOption(name = "Solid Tooltip Background", desc = "Make tooltip backgrounds fully opaque.")
+    @field:ConfigEditorBoolean
+    var solidTooltipBackground = false
+
+    @JvmField
+    @field:Expose
     @field:ConfigOption(
         name = "Keep SkyBlock Resource Pack",
         desc = "Keep Hypixel's SkyBlock resource pack loaded between servers.",
