@@ -14,6 +14,8 @@ internal data class SkyblockRepoItemJson(
 internal data class SkyblockRepoComponentsJson(
     @SerializedName("minecraft:custom_data") val customData: SkyblockRepoCustomDataJson? = null,
     @SerializedName("minecraft:custom_name") val customName: SkyblockRepoTextJson? = null,
+    @SerializedName("minecraft:dyed_color") val dyedColor: Int? = null,
+    @SerializedName("minecraft:enchantment_glint_override") val hasEnchantmentGlint: Boolean? = null,
     @SerializedName("minecraft:item_model") val itemModel: String? = null,
     @SerializedName("minecraft:lore") val lore: List<SkyblockRepoTextJson> = emptyList(),
     @SerializedName("minecraft:profile") val profile: SkyblockRepoProfileJson? = null,

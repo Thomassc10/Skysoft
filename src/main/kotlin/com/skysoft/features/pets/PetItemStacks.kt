@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.item.component.CustomData
+import net.minecraft.world.item.component.DyedItemColor
 import net.minecraft.world.item.component.ItemLore
 
 internal object PetItemStacks {
@@ -49,6 +50,8 @@ internal object PetItemStacks {
             ItemStack(minecraftItemFromId(normalizeLegacyItemId(item.id)))
         }
         setItemModel(stack, item.components.itemModel)
+        item.components.dyedColor?.let { stack.set(DataComponents.DYED_COLOR, DyedItemColor(it)) }
+        item.components.hasEnchantmentGlint?.let { stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, it) }
         stack.set(DataComponents.CUSTOM_NAME, name)
         if (item.components.lore.isNotEmpty()) {
             stack.set(DataComponents.LORE, ItemLore(item.components.lore.map { Component.literal(it.text) }))
