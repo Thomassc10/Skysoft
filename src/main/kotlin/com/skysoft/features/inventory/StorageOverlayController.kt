@@ -22,7 +22,9 @@ object StorageOverlayController {
     fun isActive(screen: AbstractContainerScreen<*>?): Boolean = storageOverlayIsActive(screen)
 
     @JvmStatic
-    fun layoutScreen(screen: AbstractContainerScreen<*>) = storageOverlayLayoutScreen(screen)
+    fun layoutScreen(screen: AbstractContainerScreen<*>) {
+        storageOverlayLayoutScreen(screen)
+    }
 
     @JvmStatic
     fun renderBackground(
@@ -77,12 +79,16 @@ internal var editingTitlePage: Int? = null
 internal var editingTitleText = ""
 internal var editingTitleSelected = false
 internal var scroll = 0
+internal var scrollPosition = 0.0
+internal var scrollTarget = 0.0
+internal var lastScrollUpdateNanos = 0L
 internal var lastCommandMillis = 0L
 internal var rememberedPageIndex: Int? = null
 internal var redirectedOverviewScreenId: Int? = null
 internal var centeredPageKey: String? = null
 internal var requestedCenterPageIndex: Int? = null
 internal var requestedCenterKey: String? = null
+internal var pendingOverviewShortcutClick: PendingOverviewShortcutClick? = null
 internal val decodedStacks = linkedMapOf<String, ItemStack>()
 internal val emptyOverviewStacks = mutableMapOf<Int, ItemStack>()
 
@@ -108,6 +114,8 @@ internal enum class ToolkitType(
         StorageToolkit.HUNTING_SELECTOR_SLOT,
     ),
     ;
+
+    fun shortcutTitle(isAvailable: Boolean): String = if (isAvailable) title else "Locked $title"
 
     companion object {
         fun fromTitle(title: String): ToolkitType? = entries.firstOrNull { it.title == title }
@@ -141,6 +149,12 @@ internal data class PageLayoutResult(
     val contentHeight: Int,
 )
 
+internal data class StorageOverlayLayoutState(
+    val handle: StorageHandle,
+    val measurements: Measurements,
+    val pageLayoutResult: PageLayoutResult,
+)
+
 internal data class PageLayout(
     val pageIndex: Int,
     val x: Int,
@@ -157,6 +171,12 @@ internal data class PageLayout(
 }
 
 internal data class SlotClickAction(val button: Int, val input: ContainerInput)
+
+internal data class PendingOverviewShortcutClick(
+    val pageIndex: Int,
+    val button: Int,
+    val requestedAtMillis: Long,
+)
 
 internal val enderChestTitlePattern = Regex("""^Ender Chest (?:✦ )?\(([1-9])/[1-9]\)$""")
 internal val backpackTitlePattern = Regex("""^.+Backpack (?:✦ )?\(Slot #([0-9]+)\)$""")

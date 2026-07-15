@@ -1,12 +1,14 @@
 package com.skysoft.features.inventory
 
 import com.skysoft.data.ProfileStorage
-import com.skysoft.gui.tooltip.SkysoftTooltipRenderer
+import com.skysoft.utils.gui.Rect
 import com.skysoft.utils.gui.itemWithDecorations
 import com.skysoft.utils.render.LegacyTextRenderer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.ContainerScreen
+import net.minecraft.core.component.DataComponents
+import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -49,7 +51,16 @@ internal fun drawPages(
         for (layout in layouts.values) {
             if (!layout.intersects(measurements.scrollPanel)) continue
             val page = storageEntry(layout.pageIndex) ?: continue
-            drawPage(context, page, layout, layout.pageIndex == activePage, activeStacks, mouseX, mouseY)
+            drawPage(
+                context,
+                page,
+                layout,
+                measurements.scrollPanel,
+                layout.pageIndex == activePage,
+                activeStacks,
+                mouseX,
+                mouseY,
+            )
         }
     } finally {
         context.disableScissor()
@@ -60,6 +71,7 @@ internal fun drawPage(
     context: GuiGraphicsExtractor,
     page: ProfileStorage.SkyBlockStoragePageData,
     layout: PageLayout,
+    visibleBounds: Rect,
     active: Boolean,
     activeStacks: Map<Int, ItemStack>,
     mouseX: Int,
@@ -132,11 +144,16 @@ internal fun drawPage(
     for (index in 0 until page.rows * StoragePages.COLUMNS) {
         val slotX = pageSlotX(layout, index)
         val slotY = pageSlotY(layout, index)
+        if (!slotIntersects(visibleBounds, slotX, slotY)) continue
         drawSlotBackground(context, slotX, slotY)
         val hovered = isSlotHovered(mouseX, mouseY, slotX, slotY) && context.containsPointInScissor(mouseX, mouseY)
-        val stack = if (active) activeStacks[index] ?: ItemStack.EMPTY else stackFor(page.items.getOrNull(index))
+        val storedItem = page.items.getOrNull(index)
+        val stack = if (active) activeStacks[index] ?: ItemStack.EMPTY else stackFor(storedItem)
         if (!stack.isEmpty) {
-            if (searchText.isNotBlank() && matchesSearch(stack)) {
+            if (
+                StorageSearchIndex.hasQuery &&
+                (if (active) StorageSearchIndex.matches(stack) else StorageSearchIndex.matches(storedItem))
+            ) {
                 context.fill(
                     slotX - StorageSlots.BORDER,
                     slotY - StorageSlots.BORDER,
@@ -268,7 +285,7 @@ internal fun drawStorageSelectorPanel(
     }
     for (type in ToolkitType.entries) {
         val pos = selectorToolkitPosition(measurements, type)
-        drawMiniItem(context, toolkitShortcutStack(), pos.x, pos.y)
+        drawMiniItem(context, toolkitShortcutStack(type), pos.x, pos.y)
         if (type.pageIndex == activePage) {
             context.outline(
                 pos.x - 1,
@@ -282,24 +299,32 @@ internal fun drawStorageSelectorPanel(
     selectorSlotAt(measurements, mouseX, mouseY)?.let { hoveredSlot ->
         val pos = selectorSlotPosition(measurements, hoveredSlot)
         drawSlotHover(context, pos.x, pos.y)
-    }
-    selectorPageAt(measurements, mouseX, mouseY)?.let { pageIndex ->
-        val title = ToolkitType.fromPageIndex(pageIndex)?.title
-            ?: storage.skyBlockStoragePages[pageIndex]?.title?.ifBlank { defaultPageTitle(pageIndex) }
-            ?: return@let
-        SkysoftTooltipRenderer.render(
-            context,
-            listOf(titleDisplayText(title)),
-            mouseX + StorageTooltip.OFFSET,
-            mouseY + StorageTooltip.OFFSET,
-        )
+        val hoveredToolkit = ToolkitType.entries.firstOrNull { it.selectorSlot == hoveredSlot }
+        val stack = when {
+            hoveredSlot in 0 until ProfileStorage.SKYBLOCK_STORAGE_PAGE_COUNT ->
+                selectorIconStack(hoveredSlot, storage.skyBlockStoragePages[hoveredSlot])
+
+            hoveredToolkit != null -> toolkitShortcutStack(hoveredToolkit)
+            else -> ItemStack.EMPTY
+        }
+        if (!stack.isEmpty) context.setTooltipForNextFrame(Minecraft.getInstance().font, stack, mouseX, mouseY)
     }
 }
 
-internal fun toolkitShortcutStack(): ItemStack =
-    stackFor(ProfileStorage.SkyBlockStorageItemData(storage.skyBlockToolkitIcon))
-        .takeUnless { it.isEmpty }
-        ?: ItemStack(Items.PLAYER_HEAD)
+internal fun toolkitShortcutStack(type: ToolkitType): ItemStack {
+    val isAvailable = storageEntryExists(type.pageIndex)
+    if (isAvailable) {
+        val stack = stackFor(ProfileStorage.SkyBlockStorageItemData(storage.skyBlockToolkitIcon))
+        if (!stack.isEmpty) return stack
+    }
+    return ItemStack(if (isAvailable) Items.CHEST else Items.BARRIER).apply {
+        set(
+            DataComponents.CUSTOM_NAME,
+            Component.literal(type.shortcutTitle(isAvailable))
+                .withStyle { it.withItalic(false) },
+        )
+    }
+}
 
 internal fun drawSlotHover(context: GuiGraphicsExtractor, x: Int, y: Int) {
     context.fill(x, y, x + StorageSlots.INNER_SIZE, y + StorageSlots.INNER_SIZE, StorageColors.SLOT_HOVER)

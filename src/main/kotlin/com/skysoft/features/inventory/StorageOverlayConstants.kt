@@ -74,7 +74,7 @@ internal object StorageSelector {
     const val HEIGHT = 100
     const val SLOT_OFFSET_X = (WIDTH - COLUMNS * SLOT_SIZE) / 2
     const val SLOT_OFFSET_Y = 20
-    const val SIDE_GAP = 14
+    const val SIDE_GAP = 10
     const val STACKED_GAP = 4
     const val TEXT_X_OFFSET = 5
     const val TEXT_Y_OFFSET = 4
@@ -97,10 +97,10 @@ internal object StorageRuntime {
     const val OFFSCREEN = -100000
     const val MAX_ITEM_NBT_BYTES = 1_000_000L
     const val COMMAND_COOLDOWN_MILLIS = 100L
-}
-
-internal object StorageTooltip {
-    const val OFFSET = 12
+    const val OVERVIEW_SHORTCUT_TIMEOUT_MILLIS = 3_000L
+    const val SCROLL_RESPONSE_MILLIS = 55.0
+    const val MAX_SCROLL_FRAME_MILLIS = 100.0
+    const val SCROLL_SETTLE_DISTANCE = 0.05
 }
 
 internal object StorageColors {

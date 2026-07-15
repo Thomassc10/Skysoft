@@ -2,6 +2,7 @@ package com.skysoft.features.inventory
 
 import com.skysoft.data.hypixel.SkyBlockProfileApi
 import com.skysoft.mixin.AbstractContainerScreenAccessor
+import com.skysoft.utils.gui.nonPlayerSlots
 import com.skysoft.utils.input.InputHandlingResult
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
@@ -13,12 +14,13 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.screens.inventory.ContainerScreen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.world.inventory.ContainerInput
 import org.lwjgl.glfw.GLFW
-import kotlin.math.roundToInt
 
 internal fun registerStorageOverlay() {
     SkyBlockProfileApi.onProfileChange { resetTransientState() }
     ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> resetTransientState() }
+    registerStorageOverlayChat()
     ClientTickEvents.END_CLIENT_TICK.register {
         onClientTick()
     }
@@ -37,14 +39,18 @@ internal fun registerMouseClickInterceptor() {
 
 internal fun storageOverlayIsActive(screen: AbstractContainerScreen<*>?): Boolean = handleFor(screen) != null
 
-internal fun storageOverlayLayoutScreen(screen: AbstractContainerScreen<*>) {
+internal fun storageOverlayLayoutScreen(
+    screen: AbstractContainerScreen<*>,
+    shouldReadScreen: Boolean = true,
+): StorageOverlayLayoutState? {
     val handle = handleFor(screen) ?: run {
         restoreStorageOverlaySlots(screen)
-        return
+        return null
     }
-    readScreen(screen, handle)
+    if (shouldReadScreen) readScreen(screen, handle)
     rememberActivePage(handle)
     redirectToRememberedPage(screen, handle)
+    advanceStorageScroll()
 
     val measurements = measurements(screen.width, screen.height)
     val activePage = handle.entryIndex()
@@ -80,6 +86,7 @@ internal fun storageOverlayLayoutScreen(screen: AbstractContainerScreen<*>) {
             position?.y?.minus(top) ?: StorageRuntime.OFFSCREEN,
         )
     }
+    return StorageOverlayLayoutState(handle, measurements, pageLayoutResult)
 }
 
 internal fun renderStorageOverlayBackground(
@@ -93,12 +100,11 @@ internal fun renderStorageOverlayBackground(
 }
 
 internal fun renderOverlay(screen: ContainerScreen, context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
-    val handle = handleFor(screen) ?: return
-    readScreen(screen, handle)
-    storageOverlayLayoutScreen(screen)
-    val measurements = measurements(screen.width, screen.height)
+    val layoutState = storageOverlayLayoutScreen(screen, shouldReadScreen = false) ?: return
+    val handle = layoutState.handle
+    val measurements = layoutState.measurements
     val activePage = handle.entryIndex()
-    val pageLayoutResult = pageLayouts(measurements, activePage)
+    val pageLayoutResult = layoutState.pageLayoutResult
 
     drawStoragePanel(context, measurements)
     drawPages(
@@ -125,29 +131,31 @@ internal fun handlePreScreenMouseClick(
     screen: AbstractContainerScreen<*>,
     click: MouseButtonEvent,
 ): InputHandlingResult {
-    val handle = handleFor(screen) ?: return InputHandlingResult.IGNORED
-    readScreen(screen, handle)
-    storageOverlayLayoutScreen(screen)
+    val layoutState = storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
+    val mouseX = click.x().toInt()
+    val mouseY = click.y().toInt()
+    updateSearchFocusFromClick(layoutState.measurements, mouseX, mouseY)
 
-    if (routeActivePageSlotClick(screen, handle, click) == InputHandlingResult.CONSUMED) {
+    if (routeActivePageSlotClick(screen, layoutState.handle, click) == InputHandlingResult.CONSUMED) {
         return InputHandlingResult.CONSUMED
     }
 
-    return handleStorageOverlayMouseClick(screen, click)
+    return handleStorageOverlayMouseClick(screen, click, layoutState)
 }
 
 internal fun handleStorageOverlayMouseClick(
     screen: AbstractContainerScreen<*>,
     click: MouseButtonEvent,
+    preparedLayout: StorageOverlayLayoutState? = null,
 ): InputHandlingResult {
-    val handle = handleFor(screen) ?: return InputHandlingResult.IGNORED
-    readScreen(screen, handle)
-    storageOverlayLayoutScreen(screen)
-    val measurements = measurements(screen.width, screen.height)
+    val layoutState = preparedLayout ?: storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
+    val handle = layoutState.handle
+    val measurements = layoutState.measurements
     val activePage = handle.entryIndex()
-    val pageLayoutResult = pageLayouts(measurements, activePage)
+    val pageLayoutResult = layoutState.pageLayoutResult
     val mouseX = click.x().toInt()
     val mouseY = click.y().toInt()
+    updateSearchFocusFromClick(measurements, mouseX, mouseY)
 
     return when {
         pointInSearch(measurements, mouseX, mouseY) -> {
@@ -155,6 +163,7 @@ internal fun handleStorageOverlayMouseClick(
             finishTitleEdit()
             if (click.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT && searchText.isNotEmpty()) {
                 searchText = ""
+                resetStorageScroll()
                 coerceScroll(measurements, pageLayouts(measurements, activePage).contentHeight)
             }
             InputHandlingResult.CONSUMED
@@ -171,7 +180,7 @@ internal fun handleStorageOverlayMouseClick(
             }
         }
         config.settings.miniMenu &&
-            handleSelectorPageClick(screen, click, measurements, pageLayoutResult, activePage, mouseX, mouseY) ==
+            handleSelectorPageClick(screen, handle, click, measurements, pageLayoutResult, activePage, mouseX, mouseY) ==
             InputHandlingResult.CONSUMED -> InputHandlingResult.CONSUMED
         config.settings.miniMenu && measurements.selectorBounds.contains(mouseX, mouseY) -> InputHandlingResult.CONSUMED
         measurements.playerBounds.contains(mouseX, mouseY) -> InputHandlingResult.IGNORED
@@ -193,6 +202,7 @@ internal fun handleStorageOverlayMouseClick(
 
 internal fun handleSelectorPageClick(
     screen: AbstractContainerScreen<*>,
+    handle: StorageHandle,
     click: MouseButtonEvent,
     measurements: Measurements,
     pageLayoutResult: PageLayoutResult,
@@ -201,12 +211,50 @@ internal fun handleSelectorPageClick(
     mouseY: Int,
 ): InputHandlingResult {
     val pageIndex = selectorPageAt(measurements, mouseX, mouseY) ?: return InputHandlingResult.IGNORED
+    if (
+        handle == StorageHandle.Overview &&
+        routeOverviewShortcutClick(screen, click.button(), pageIndex) == InputHandlingResult.CONSUMED
+    ) {
+        storageOverlayLayoutScreen(screen)
+        return InputHandlingResult.CONSUMED
+    }
+    if (
+        requestOverviewShortcutClick(screen, click, pageIndex, mouseX, mouseY) == InputHandlingResult.CONSUMED
+    ) {
+        return InputHandlingResult.CONSUMED
+    }
     if (pageIndex == activePage || !screen.menu.carried.isEmpty || click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
         centerPage(measurements, pageLayoutResult, pageIndex)
     } else {
         tryNavigateTo(screen, pageIndex, mouseX, mouseY)
     }
     storageOverlayLayoutScreen(screen)
+    return InputHandlingResult.CONSUMED
+}
+
+internal fun routeOverviewShortcutClick(
+    screen: AbstractContainerScreen<*>,
+    button: Int,
+    pageIndex: Int,
+): InputHandlingResult {
+    val containerSlot = StorageOverviewSlots.slotForPageIndex(pageIndex) ?: return InputHandlingResult.IGNORED
+    val slot = screen.nonPlayerSlots().firstOrNull { it.containerSlot == containerSlot }
+        ?: return InputHandlingResult.IGNORED
+    if (
+        slot.item.isEmpty ||
+        storageOverviewSlotState(slot.item) == StorageOverviewSlotState.LOCKED ||
+        (button != GLFW.GLFW_MOUSE_BUTTON_LEFT && button != GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+    ) {
+        return InputHandlingResult.IGNORED
+    }
+    redirectedOverviewScreenId = System.identityHashCode(screen)
+    (screen as AbstractContainerScreenAccessor).`skysoft$slotClicked`(
+        slot,
+        slot.index,
+        button,
+        ContainerInput.PICKUP,
+    )
+    screen.`skysoft$setSkipNextRelease`(true)
     return InputHandlingResult.CONSUMED
 }
 
@@ -243,13 +291,13 @@ internal fun handleStorageOverlayMouseScroll(
     mouseY: Double,
     scrollY: Double,
 ): InputHandlingResult {
-    val handle = handleFor(screen) ?: return InputHandlingResult.IGNORED
-    val measurements = measurements(screen.width, screen.height)
+    val layoutState = storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
+    val measurements = layoutState.measurements
     if (!measurements.scrollPanel.contains(mouseX.toInt(), mouseY.toInt())) return InputHandlingResult.IGNORED
-    scroll -= (scrollY * config.details.scrollSpeed).roundToInt()
-    val activePage = handle.entryIndex()
-    coerceScroll(measurements, pageLayouts(measurements, activePage).contentHeight)
-    storageOverlayLayoutScreen(screen)
+    moveStorageScrollTarget(
+        -(scrollY * config.details.scrollSpeed),
+        maxScroll(measurements, layoutState.pageLayoutResult.contentHeight),
+    )
     return InputHandlingResult.CONSUMED
 }
 
@@ -263,7 +311,7 @@ internal fun handleStorageOverlayKeyPress(screen: AbstractContainerScreen<*>, ev
                 searchFocused = false
             } else {
                 searchText = ""
-                scroll = 0
+                resetStorageScroll()
                 storageOverlayLayoutScreen(screen)
             }
             return InputHandlingResult.CONSUMED
@@ -277,7 +325,7 @@ internal fun handleStorageOverlayKeyPress(screen: AbstractContainerScreen<*>, ev
         GLFW.GLFW_KEY_BACKSPACE -> {
             if (searchText.isNotEmpty()) {
                 searchText = searchText.dropLast(1)
-                scroll = 0
+                resetStorageScroll()
                 storageOverlayLayoutScreen(screen)
             }
             return InputHandlingResult.CONSUMED
@@ -290,7 +338,7 @@ internal fun handleStorageOverlayKeyPress(screen: AbstractContainerScreen<*>, ev
     val blockedModifiers = GLFW.GLFW_MOD_CONTROL or GLFW.GLFW_MOD_ALT or GLFW.GLFW_MOD_SUPER
     if (typed?.length == 1 && (event.modifiers() and blockedModifiers) == 0) {
         searchText += typed
-        scroll = 0
+        resetStorageScroll()
         storageOverlayLayoutScreen(screen)
     }
     return InputHandlingResult.CONSUMED

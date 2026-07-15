@@ -2,19 +2,63 @@ package com.skysoft.features.inventory
 
 import com.skysoft.data.ProfileStorage
 import com.skysoft.gui.scale.InventoryCursorMemory
+import com.skysoft.utils.input.InputHandlingResult
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.client.input.MouseButtonEvent
+import org.lwjgl.glfw.GLFW
 
 internal fun rememberActivePage(handle: StorageHandle) {
     handle.entryIndex()?.let { rememberedPageIndex = it }
 }
 
 internal fun redirectToRememberedPage(screen: AbstractContainerScreen<*>, handle: StorageHandle) {
-    if (handle != StorageHandle.Overview || !screen.menu.carried.isEmpty) return
+    if (handle != StorageHandle.Overview || !screen.menu.carried.isEmpty || pendingOverviewShortcutClick != null) return
     val pageIndex = rememberedPageIndex?.takeIf { storageEntryExists(it) } ?: return
     val screenId = System.identityHashCode(screen)
     if (redirectedOverviewScreenId == screenId) return
     if (tryNavigateToRememberedPage(screen, pageIndex)) redirectedOverviewScreenId = screenId
+}
+
+internal fun requestOverviewShortcutClick(
+    screen: AbstractContainerScreen<*>,
+    click: MouseButtonEvent,
+    pageIndex: Int,
+    mouseX: Int,
+    mouseY: Int,
+): InputHandlingResult {
+    if (
+        click.button() != GLFW.GLFW_MOUSE_BUTTON_RIGHT ||
+        !screen.menu.carried.isEmpty ||
+        StorageOverviewSlots.slotForPageIndex(pageIndex) == null
+    ) {
+        return InputHandlingResult.IGNORED
+    }
+    val connection = Minecraft.getInstance().connection ?: return InputHandlingResult.IGNORED
+    val now = System.currentTimeMillis()
+    if (now - lastCommandMillis < StorageRuntime.COMMAND_COOLDOWN_MILLIS) return InputHandlingResult.IGNORED
+    lastCommandMillis = now
+    pendingOverviewShortcutClick = PendingOverviewShortcutClick(pageIndex, click.button(), now)
+    saveCursorBeforeNavigation(screen, mouseX, mouseY)
+    connection.sendCommand("storage")
+    return InputHandlingResult.CONSUMED
+}
+
+internal fun routePendingOverviewShortcutClick(
+    screen: AbstractContainerScreen<*>,
+    handle: StorageHandle,
+): InputHandlingResult {
+    val pending = pendingOverviewShortcutClick ?: return InputHandlingResult.IGNORED
+    val now = System.currentTimeMillis()
+    val isExpired = now < pending.requestedAtMillis ||
+        now - pending.requestedAtMillis > StorageRuntime.OVERVIEW_SHORTCUT_TIMEOUT_MILLIS
+    if (isExpired) {
+        pendingOverviewShortcutClick = null
+        return InputHandlingResult.IGNORED
+    }
+    if (handle != StorageHandle.Overview) return InputHandlingResult.IGNORED
+    pendingOverviewShortcutClick = null
+    return routeOverviewShortcutClick(screen, pending.button, pending.pageIndex)
 }
 
 internal fun centerActivePageIfNeeded(

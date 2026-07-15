@@ -150,22 +150,40 @@ internal fun pageHeight(page: ProfileStorage.SkyBlockStoragePageData): Int =
 
 internal fun pointInSearch(measurements: Measurements, x: Int, y: Int): Boolean = measurements.search.contains(x, y)
 
+internal fun updateSearchFocusFromClick(measurements: Measurements, mouseX: Int, mouseY: Int) {
+    searchFocused = StorageSearchFocus.isFocusedAfterClick(searchFocused, measurements.search, mouseX, mouseY)
+}
+
+internal object StorageSearchFocus {
+    fun isFocusedAfterClick(isFocused: Boolean, searchBounds: Rect, mouseX: Int, mouseY: Int): Boolean =
+        isFocused && searchBounds.contains(mouseX, mouseY)
+}
+
 internal fun coerceScroll(measurements: Measurements, contentHeight: Int) {
-    scroll = scroll.coerceIn(0, maxScroll(measurements, contentHeight))
+    coerceStorageScroll(maxScroll(measurements, contentHeight))
 }
 
 internal fun maxScroll(measurements: Measurements, contentHeight: Int): Int =
     (contentHeight - measurements.scrollPanel.height).coerceAtLeast(0)
 
-internal fun pageIndexFromOverviewSlot(slot: Int): Int? = when (slot) {
-    in FIRST_OVERVIEW_CHEST_SLOT until BACKPACK_OVERVIEW_START_SLOT -> slot - FIRST_OVERVIEW_CHEST_SLOT
-    in FIRST_OVERVIEW_BACKPACK_SLOT until OVERVIEW_SLOT_END ->
-        slot - FIRST_OVERVIEW_BACKPACK_SLOT + ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES
-    else -> null
-}
+internal object StorageOverviewSlots {
+    fun pageIndexForSlot(slot: Int): Int? = when (slot) {
+        in FIRST_CHEST_SLOT until BACKPACK_SECTION_START -> slot - FIRST_CHEST_SLOT
+        in FIRST_BACKPACK_SLOT until SLOT_END ->
+            slot - FIRST_BACKPACK_SLOT + ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES
+        else -> null
+    }
 
-private const val FIRST_OVERVIEW_CHEST_SLOT = StoragePlayerInventory.HOTBAR_SLOT_COUNT
-private const val BACKPACK_OVERVIEW_START_SLOT = 18
-private const val FIRST_OVERVIEW_BACKPACK_SLOT = 27
-private const val OVERVIEW_SLOT_END = 45
+    fun slotForPageIndex(pageIndex: Int): Int? = when (pageIndex) {
+        in 0 until ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES -> FIRST_CHEST_SLOT + pageIndex
+        in ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES until ProfileStorage.SKYBLOCK_STORAGE_PAGE_COUNT ->
+            FIRST_BACKPACK_SLOT + pageIndex - ProfileStorage.SKYBLOCK_STORAGE_ENDER_CHEST_PAGES
+        else -> null
+    }
+
+    private const val FIRST_CHEST_SLOT = StoragePlayerInventory.HOTBAR_SLOT_COUNT
+    private const val BACKPACK_SECTION_START = 18
+    private const val FIRST_BACKPACK_SLOT = 27
+    private const val SLOT_END = 45
+}
 
