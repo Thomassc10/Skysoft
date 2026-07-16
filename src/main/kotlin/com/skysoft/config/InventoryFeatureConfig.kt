@@ -136,13 +136,8 @@ class ItemListConfig {
     @field:Expose
     var favorites: MutableList<String> = mutableListOf()
 
-    @JvmField
-    @field:Expose
-    var recentItems: MutableList<String> = mutableListOf()
-
     fun repairLoadedValues() {
         favorites = favorites.filter(String::isNotBlank).distinct().take(MAX_FAVORITES).toMutableList()
-        recentItems = recentItems.filter(String::isNotBlank).distinct().take(MAX_RECENT_ITEMS).toMutableList()
         sources.searchPosition.rememberDefault(ItemListSourcesConfig.defaultSearchPosition())
         settings.repairLoadedValues()
         sources.repairLoadedValues()
@@ -150,7 +145,6 @@ class ItemListConfig {
 
     companion object {
         const val MAX_FAVORITES = 64
-        const val MAX_RECENT_ITEMS = 40
     }
 }
 
@@ -201,14 +195,6 @@ class ItemListSettingsConfig {
     @field:ConfigOption(name = "Refresh Data", desc = "Check for updated Item List data.")
     @field:ConfigEditorButton(buttonText = "Refresh")
     val refreshData = Runnable { com.skysoft.data.skyblock.SkyBlockDataRepository.reload() }
-
-    @JvmField
-    @field:ConfigOption(name = "Clear Recent Items", desc = "Clear Item List history.")
-    @field:ConfigEditorButton(buttonText = "Clear")
-    val clearRecent = Runnable {
-        SkysoftConfigGui.config().inventory.itemList.recentItems.clear()
-        SkysoftConfigGui.config().saveNow()
-    }
 
     @JvmField
     @field:ConfigOption(name = "Clear Favorites", desc = "Clear all favorite items.")

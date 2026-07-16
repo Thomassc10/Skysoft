@@ -32,12 +32,4 @@ internal object ItemListState {
     }
 
     fun favorites(): List<ItemListEntryKey> = config.favorites.mapNotNull(ItemListEntryKey::parse)
-
-    fun recordRecent(key: ItemListEntryKey) {
-        val serialized = key.serialized()
-        config.recentItems.remove(serialized)
-        config.recentItems.add(0, serialized)
-        while (config.recentItems.size > ItemListConfig.MAX_RECENT_ITEMS) config.recentItems.removeLast()
-        SkysoftConfigGui.config().saveNow()
-    }
 }

@@ -42,7 +42,6 @@ object ItemListSearchCommand {
     fun openPending() {
         val key = pendingKey ?: return
         pendingKey = null
-        ItemListState.recordRecent(key)
         MinecraftClient.setScreen(ItemListViewerScreen(null, key))
     }
 

@@ -642,7 +642,6 @@ object ItemListController {
         parent: AbstractContainerScreen<*>,
         mode: ItemListViewMode = ItemListViewMode.INFO,
     ) {
-        ItemListState.recordRecent(key)
         SoundUtilities.playClickSound()
         MinecraftClient.setScreen(ItemListViewerScreen(parent, key, mode))
     }

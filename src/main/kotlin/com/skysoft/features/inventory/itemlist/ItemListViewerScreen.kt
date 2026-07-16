@@ -544,7 +544,6 @@ internal class ItemListViewerScreen(
         backStack += selection.location()
         forwardStack.clear()
         selection.open(key)
-        ItemListState.recordRecent(key)
         return ViewerInputResult.HANDLED
     }
 
@@ -586,7 +585,6 @@ private fun navigateMinionTier(
     backStack += selection.location()
     forwardStack.clear()
     selection.open(nextKey)
-    ItemListState.recordRecent(nextKey)
     return ViewerInputResult.HANDLED
 }
 
