@@ -1,13 +1,17 @@
 package com.skysoft.features.misc.blockoverlay
 
-import com.mojang.brigadier.Command
 import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.data.hypixel.HypixelLocationState
 import com.skysoft.data.skyblock.SkyBlockEventState
 import com.skysoft.data.skyblock.SkyBlockItemId.skyBlockId
-import com.skysoft.features.pets.CanonicalItemNames
+import com.skysoft.features.misc.conditions.FeatureConditionActivationCache
+import com.skysoft.features.misc.conditions.FeatureConditionActivationKey
+import com.skysoft.features.misc.conditions.FeatureConditionContext
+import com.skysoft.features.misc.conditions.FeatureConditionVersion
+import com.skysoft.features.misc.conditions.FeatureConditions
+import com.skysoft.features.misc.conditions.FeatureItemConditionCatalogue
+import com.skysoft.features.misc.conditions.FeatureItemConditionCommand
 import com.skysoft.utils.ColorUtilities.toColor
-import com.skysoft.utils.SkysoftChat
 import com.skysoft.utils.render.BlockHighlightRenderer
 import com.skysoft.utils.render.SkysoftRenderContext
 import com.skysoft.utils.render.WorldRenderDispatcher
@@ -24,10 +28,12 @@ import kotlin.math.roundToInt
 
 object BlockOverlay {
     private var pendingTarget: BlockOverlayTarget? = null
-    private val activationCache = BlockOverlayActivationCache()
+    private val activationCache = FeatureConditionActivationCache()
+    private val conditionVersion = FeatureConditionVersion()
+    private val itemCatalogue = FeatureItemConditionCatalogue()
 
     fun register() {
-        BlockOverlayItemCatalogue.startSession(config.settings.combinations)
+        itemCatalogue.startSession(config.settings.combinations)
         WorldRenderDispatcher.registerHandler(::renderWorld)
     }
 
@@ -72,54 +78,26 @@ object BlockOverlay {
     }
 
     fun addHeldItem(source: FabricClientCommandSource): Int {
-        val stack = Minecraft.getInstance().player?.mainHandItem
-        val rawItemId = stack?.skyBlockId()
-        val resolution = BlockOverlayItemInput.resolve(
-            isEmpty = stack == null || stack.isEmpty,
-            itemId = rawItemId,
-            canonicalName = rawItemId?.let(CanonicalItemNames::resolve),
+        return FeatureItemConditionCommand.addHeldItem(
+            source = source,
+            featureName = "Block Overlay",
+            combinations = config.settings.combinations,
+            catalogue = itemCatalogue,
+            onChanged = conditionVersion::markChanged,
         )
-        if (resolution is BlockOverlayItemInputResult.Rejected) return rejectItem(source, resolution.reason)
-        resolution as BlockOverlayItemInputResult.Ready
-        val itemId = resolution.itemId
-        val cleanName = resolution.cleanName
-
-        val label = "Holding Item: $cleanName"
-        if (
-            BlockOverlayItemCatalogue.addActiveItem(config.settings.combinations, itemId, label) ==
-            BlockOverlayItemAddResult.ALREADY_AVAILABLE
-        ) {
-            SkysoftChat.error(source, "That item is already available in Block Overlay combinations.")
-            return 0
-        }
-        BlockOverlayRules.markChanged()
-        SkysoftConfigGui.config().saveNow()
-        SkysoftChat.feedback(source, "Added $cleanName as a new Block Overlay combination.")
-        return Command.SINGLE_SUCCESS
-    }
-
-    private fun rejectItem(source: FabricClientCommandSource, rejection: BlockOverlayItemRejection): Int {
-        val message = when (rejection) {
-            BlockOverlayItemRejection.EMPTY_HAND -> "Hold a SkyBlock item first."
-            BlockOverlayItemRejection.MISSING_ID -> "The held item has no SkyBlock item ID."
-            BlockOverlayItemRejection.NAME_UNAVAILABLE ->
-                "The clean item name is still loading. Try the command again shortly."
-        }
-        SkysoftChat.error(source, message)
-        return 0
     }
 
     private fun conditionsMatch(heldItemId: String?): Boolean {
-        val key = BlockOverlayActivationKey(
+        val key = FeatureConditionActivationKey(
             locationVersion = HypixelLocationState.locationVersion,
             eventVersion = SkyBlockEventState.version,
-            rulesVersion = BlockOverlayRules.version,
+            rulesVersion = conditionVersion.version,
             heldItemId = heldItemId,
         )
         return activationCache.conditionsMatch(key) {
-            BlockOverlayConditions.matches(
+            FeatureConditions.matches(
                 config.settings.combinations,
-                BlockOverlayConditionContext(
+                FeatureConditionContext(
                     isInSkyBlock = HypixelLocationState.inSkyBlock,
                     island = HypixelLocationState.currentIsland,
                     activeEvents = SkyBlockEventState.activeEvents(),
@@ -128,6 +106,10 @@ object BlockOverlay {
             )
         }
     }
+
+    internal fun itemConditions() = itemCatalogue.conditions()
+
+    internal fun markConditionsChanged() = conditionVersion.markChanged()
 
     private fun renderWorld(context: SkysoftRenderContext) {
         val target = pendingTarget ?: return
@@ -177,22 +159,3 @@ private data class BlockOverlayTarget(
     val position: BlockPos,
     val shape: VoxelShape,
 )
-
-internal data class BlockOverlayActivationKey(
-    val locationVersion: Long,
-    val eventVersion: Long,
-    val rulesVersion: Long,
-    val heldItemId: String?,
-)
-
-internal class BlockOverlayActivationCache {
-    private var cachedKey: BlockOverlayActivationKey? = null
-    private var cachedValue = false
-
-    fun conditionsMatch(key: BlockOverlayActivationKey, calculateConditionsMatch: () -> Boolean): Boolean {
-        if (key == cachedKey) return cachedValue
-        cachedKey = key
-        cachedValue = calculateConditionsMatch()
-        return cachedValue
-    }
-}

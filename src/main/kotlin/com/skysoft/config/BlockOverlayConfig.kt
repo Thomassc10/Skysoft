@@ -43,21 +43,5 @@ class BlockOverlaySettingsConfig {
     @field:Expose
     @field:ConfigOption(name = "Combinations", desc = "Any matching combination enables the overlay.")
     @field:ConfigEditorCombinations(provider = BlockOverlayCombinationsProvider::class)
-    val combinations: MutableList<BlockOverlayCombination> = mutableListOf()
-}
-
-class BlockOverlayCombination(
-    @field:Expose val conditions: MutableList<BlockOverlayCondition> = mutableListOf(),
-)
-
-class BlockOverlayCondition(
-    @field:Expose var kind: BlockOverlayConditionKind = BlockOverlayConditionKind.ISLAND,
-    @field:Expose var value: String = "",
-    @field:Expose var displayName: String = "",
-)
-
-enum class BlockOverlayConditionKind {
-    EVENT,
-    ISLAND,
-    ITEM,
+    val combinations: MutableList<FeatureConditionCombination> = mutableListOf()
 }

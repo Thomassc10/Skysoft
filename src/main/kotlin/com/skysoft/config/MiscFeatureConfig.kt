@@ -16,6 +16,11 @@ class MiscFeatureConfig {
 
     @JvmField
     @field:Expose
+    @field:Category(name = "Auto Sprint", desc = "Automatically sprint under configurable conditions.")
+    val autoSprint = AutoSprintConfig()
+
+    @JvmField
+    @field:Expose
     @field:Category(name = "Pets", desc = "Pet display and storage settings.")
     val pets = PetFeatureConfig()
 
@@ -23,12 +28,6 @@ class MiscFeatureConfig {
     @field:Expose
     @field:Category(name = "Rare Loot Sharing", desc = "Share valuable drops in party chat.")
     val rareLootSharing = RareLootSharingConfig()
-
-    @JvmField
-    @field:Expose
-    @field:ConfigOption(name = "Auto Sprint", desc = "Auto sprinting.")
-    @field:ConfigEditorBoolean
-    var autoSprint = true
 
     @JvmField
     @field:Expose

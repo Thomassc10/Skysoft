@@ -39,6 +39,7 @@ import com.skysoft.features.inventory.SmoothSwapping
 import com.skysoft.features.inventory.StorageOverlayController
 import com.skysoft.features.loot.RareLootSharing
 import com.skysoft.features.misc.PlayerHeadSkinFix
+import com.skysoft.features.misc.autosprint.AutoSprint
 import com.skysoft.features.misc.blockoverlay.BlockOverlay
 import com.skysoft.features.misc.actionbar.ActionBarBackground
 import com.skysoft.features.misc.update.DownloadOpenResult
@@ -106,6 +107,7 @@ class SkysoftMod : ClientModInitializer {
         SmoothSwapping.register()
         ActionBarBackground.register()
         PlayerHeadSkinFix.register()
+        AutoSprint.register()
         BlockOverlay.register()
         ActivePetTracker.register()
         SkillExpGainApi.register()
@@ -177,6 +179,10 @@ class SkysoftMod : ClientModInitializer {
                 child("protect") { name -> literal(name).executes { ItemProtectionManager.toggleHeldItem(it.source) } }
                 child("update", "ssupdate") { name -> literal(name).executes { checkUpdate() } }
                 child("download") { name -> literal(name).executes { downloadUpdate(it.source) } }
+                child {
+                    literal("autosprint")
+                        .then(literal("additem").executes { AutoSprint.addHeldItem(it.source) })
+                }
                 child {
                     literal("blockoverlay")
                         .then(literal("additem").executes { BlockOverlay.addHeldItem(it.source) })

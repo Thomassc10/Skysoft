@@ -193,6 +193,14 @@ internal object SkysoftConfigMigrations {
 
     private fun migrateMiscLayout(json: JsonObject) {
         val miscJson = json.getObjectOrNull("misc") ?: return
+        miscJson.get("autoSprint")
+            ?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isBoolean }
+            ?.let { legacyEnabled ->
+                miscJson.add(
+                    "autoSprint",
+                    JsonObject().also { autoSprint -> autoSprint.add("enabled", legacyEnabled.deepCopy()) },
+                )
+            }
         val rareLootValue = miscJson.get("rareLootValue")
         val legacyRareLootSharing = miscJson.get("rareLootSharing")?.takeUnless { it.isJsonObject }
         val rareLootJson = miscJson.getObjectOrNull("rareLootSharing") ?: JsonObject().also {
