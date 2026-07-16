@@ -34,7 +34,7 @@ internal fun readOrdersScreen(screen: AbstractContainerScreen<*>) {
         return
     }
     pendingOrdersInventoryStableTicks++
-    if (pendingOrdersInventoryStableTicks < BazaarTrackerGuiPruning.INVENTORY_STABLE_TICKS) return
+    if (pendingOrdersInventoryStableTicks < GUI_MISSING_PRUNE_INVENTORY_STABLE_TICKS) return
     lastOrdersInventoryKey = key
     pendingOrdersInventoryKey = null
     pendingOrdersInventoryStableTicks = 0
@@ -112,10 +112,10 @@ internal fun renderBazaarTrackerSlotIndicatorBackground(
 ) {
     val indicator = slotIndicator(screen, slot) ?: return
     context.fill(
-        slot.x - BazaarTrackerSlotIndicators.INSET,
-        slot.y - BazaarTrackerSlotIndicators.INSET,
-        slot.x + BazaarTrackerSlotIndicators.END_OFFSET,
-        slot.y + BazaarTrackerSlotIndicators.END_OFFSET,
+        slot.x - SLOT_INDICATOR_INSET,
+        slot.y - SLOT_INDICATOR_INSET,
+        slot.x + SLOT_INDICATOR_END_OFFSET,
+        slot.y + SLOT_INDICATOR_END_OFFSET,
         indicator.fillColor,
     )
 }
@@ -127,27 +127,27 @@ internal fun renderBazaarTrackerSlotIndicatorOverlay(
 ) {
     val indicator = slotIndicator(screen, slot) ?: return
     context.outline(
-        slot.x - BazaarTrackerSlotIndicators.INSET,
-        slot.y - BazaarTrackerSlotIndicators.INSET,
-        BazaarTrackerSlotIndicators.SIZE,
-        BazaarTrackerSlotIndicators.SIZE,
+        slot.x - SLOT_INDICATOR_INSET,
+        slot.y - SLOT_INDICATOR_INSET,
+        SLOT_INDICATOR_SIZE,
+        SLOT_INDICATOR_SIZE,
         indicator.outlineColor,
     )
     if (!indicator.partial) return
     context.fill(
-        slot.x + BazaarTrackerSlotIndicators.PARTIAL_MARKER_X_OFFSET,
-        slot.y + BazaarTrackerSlotIndicators.PARTIAL_MARKER_Y_OFFSET,
-        slot.x + BazaarTrackerSlotIndicators.END_OFFSET,
-        slot.y + BazaarTrackerSlotIndicators.END_OFFSET,
-        BazaarTrackerSlotIndicators.PARTIAL_MARKER_BACKGROUND,
+        slot.x + PARTIAL_MARKER_X_OFFSET,
+        slot.y + PARTIAL_MARKER_Y_OFFSET,
+        slot.x + SLOT_INDICATOR_END_OFFSET,
+        slot.y + SLOT_INDICATOR_END_OFFSET,
+        PARTIAL_MARKER_BACKGROUND,
     )
     LegacyTextRenderer.draw(
         context,
         "§e%",
-        slot.x + BazaarTrackerSlotIndicators.PARTIAL_MARKER_TEXT_X_OFFSET,
-        slot.y + BazaarTrackerSlotIndicators.PARTIAL_MARKER_TEXT_Y_OFFSET,
+        slot.x + PARTIAL_MARKER_TEXT_X_OFFSET,
+        slot.y + PARTIAL_MARKER_TEXT_Y_OFFSET,
         shadow = true,
-        defaultColor = BazaarTrackerSlotIndicators.PARTIAL_MARKER_TEXT_COLOR,
+        defaultColor = PARTIAL_MARKER_TEXT_COLOR,
     )
 }
 
@@ -205,15 +205,15 @@ private fun hasMarketProof(order: ProfileStorage.BazaarOrderData, market: Bazaar
 }
 
 internal fun slotFillColor(status: OrderStatus): Int = when (status) {
-    OrderStatus.FILLED -> BazaarTrackerSlotIndicators.FILLED_FILL
-    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> BazaarTrackerSlotIndicators.UNDERCUT_FILL
-    OrderStatus.COMPETITIVE -> BazaarTrackerSlotIndicators.COMPETITIVE_FILL
+    OrderStatus.FILLED -> SLOT_FILLED_FILL
+    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> SLOT_UNDERCUT_FILL
+    OrderStatus.COMPETITIVE -> SLOT_COMPETITIVE_FILL
 }
 
 internal fun slotOutlineColor(status: OrderStatus): Int = when (status) {
-    OrderStatus.FILLED -> BazaarTrackerSlotIndicators.FILLED_OUTLINE
-    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> BazaarTrackerSlotIndicators.UNDERCUT_OUTLINE
-    OrderStatus.COMPETITIVE -> BazaarTrackerSlotIndicators.COMPETITIVE_OUTLINE
+    OrderStatus.FILLED -> SLOT_FILLED_OUTLINE
+    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> SLOT_UNDERCUT_OUTLINE
+    OrderStatus.COMPETITIVE -> SLOT_COMPETITIVE_OUTLINE
 }
 
 internal fun recordClickedOrder(screen: AbstractContainerScreen<*>, click: MouseButtonEvent) {
@@ -226,7 +226,7 @@ internal fun recordClickedOrder(screen: AbstractContainerScreen<*>, click: Mouse
     val signature = "${screen.menu.containerId}|${slot.containerSlot}|${ItemStack.hashItemAndComponents(slot.item)}"
     if (
         signature == lastOrdersGuiClickSignature &&
-        now - lastOrdersGuiClickMillis < BazaarTrackerTiming.DUPLICATE_CLICK_SUPPRESS_MILLIS
+        now - lastOrdersGuiClickMillis < DUPLICATE_CLICK_SUPPRESS_MILLIS
     ) return
     lastOrdersGuiClickMillis = now
     lastOrdersGuiClickSignature = signature

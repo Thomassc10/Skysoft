@@ -33,13 +33,13 @@ internal fun routeActivePageSlotClick(
         }
     } ?: return InputHandlingResult.IGNORED
     val (slot, action) = slotAndAction
-    (screen as AbstractContainerScreenAccessor).`skysoft$slotClicked`(
+    (screen as AbstractContainerScreenAccessor).skysoftSlotClicked(
         slot,
         slot.index,
         action.button,
         action.input,
     )
-    screen.`skysoft$setSkipNextRelease`(true)
+    screen.skysoftSetSkipNextRelease(true)
     storageOverlayLayoutScreen(screen)
     return InputHandlingResult.CONSUMED
 }
@@ -93,10 +93,10 @@ internal fun slotClickAction(
 
 internal fun outsideVanillaContainer(screen: AbstractContainerScreen<*>, mouseX: Int, mouseY: Int): Boolean {
     val accessor = screen as AbstractContainerScreenAccessor
-    val left = accessor.`skysoft$getLeftPos`()
-    val top = accessor.`skysoft$getTopPos`()
-    return mouseX !in left until left + accessor.`skysoft$getImageWidth`() ||
-        mouseY !in top until top + accessor.`skysoft$getImageHeight`()
+    val left = accessor.skysoftGetLeftPos()
+    val top = accessor.skysoftGetTopPos()
+    return mouseX !in left until left + accessor.skysoftGetImageWidth() ||
+        mouseY !in top until top + accessor.skysoftGetImageHeight()
 }
 
 internal fun scrollbarKnobBounds(measurements: Measurements, contentHeight: Int): Rect {
@@ -151,12 +151,7 @@ internal fun pageHeight(page: ProfileStorage.SkyBlockStoragePageData): Int =
 internal fun pointInSearch(measurements: Measurements, x: Int, y: Int): Boolean = measurements.search.contains(x, y)
 
 internal fun updateSearchFocusFromClick(measurements: Measurements, mouseX: Int, mouseY: Int) {
-    searchFocused = StorageSearchFocus.isFocusedAfterClick(searchFocused, measurements.search, mouseX, mouseY)
-}
-
-internal object StorageSearchFocus {
-    fun isFocusedAfterClick(isFocused: Boolean, searchBounds: Rect, mouseX: Int, mouseY: Int): Boolean =
-        isFocused && searchBounds.contains(mouseX, mouseY)
+    searchFocused = searchFocused && measurements.search.contains(mouseX, mouseY)
 }
 
 internal fun coerceScroll(measurements: Measurements, contentHeight: Int) {

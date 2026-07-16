@@ -85,8 +85,8 @@ internal fun buildRenderable(inventoryOpen: Boolean): BazaarTrackerRenderable {
         } else {
             orders.take(
                 config.settings.maxOrders.coerceIn(
-                    BazaarTrackerDisplayLimits.MIN_ORDERS,
-                    BazaarTrackerDisplayLimits.MAX_ORDERS,
+                    MIN_TRACKER_DISPLAY_ORDERS,
+                    MAX_TRACKER_DISPLAY_ORDERS,
                 ),
             )
                 .forEach { add(orderLine(it)) }
@@ -133,7 +133,7 @@ internal fun orderLine(order: ProfileStorage.BazaarOrderData): DisplayLine {
 
 internal fun markFillHighlight(order: ProfileStorage.BazaarOrderData, filled: Long) {
     if (isPartialFill(order, filled)) {
-        fillHighlightExpiresAt[order.id] = System.currentTimeMillis() + BazaarTrackerTiming.FILL_HIGHLIGHT_MILLIS
+        fillHighlightExpiresAt[order.id] = System.currentTimeMillis() + FILL_HIGHLIGHT_MILLIS
     }
 }
 
@@ -161,8 +161,8 @@ internal fun statusFor(order: ProfileStorage.BazaarOrderData): OrderStatus {
 }
 
 internal fun statusPriority(status: OrderStatus): Int = when (status) {
-    OrderStatus.FILLED -> BazaarTrackerStatusPriority.FILLED
-    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> BazaarTrackerStatusPriority.WARNING
-    OrderStatus.COMPETITIVE -> BazaarTrackerStatusPriority.COMPETITIVE
+    OrderStatus.FILLED -> FILLED_STATUS_PRIORITY
+    OrderStatus.OUTBID, OrderStatus.UNDERCUT -> WARNING_STATUS_PRIORITY
+    OrderStatus.COMPETITIVE -> COMPETITIVE_STATUS_PRIORITY
 }
 

@@ -8,7 +8,6 @@ import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDraggableLi
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDropdown
 import io.github.notenoughupdates.moulconfig.annotations.ConfigOption
 import io.github.notenoughupdates.moulconfig.observer.Property
-import java.util.Locale
 
 class FishingFeatureConfig {
     @JvmField
@@ -93,7 +92,7 @@ hotspot
 Hotspot""",
     )
     @field:ConfigEditorDropdown
-    var labelFormat = FishingHotspotLabelFormat.CAPS
+    var labelFormat = WaypointLabelFormat.CAPS
 
     @JvmField
     @field:Expose
@@ -122,21 +121,6 @@ enum class FishingHotspotType(
             }
         }
     }
-}
-
-enum class FishingHotspotLabelFormat(private val displayName: String) {
-    CAPS("CAPS"),
-    LOWERCASE("nocaps"),
-    REGULAR("Regular"),
-    ;
-
-    fun format(label: String): String = when (this) {
-        CAPS -> label.uppercase(Locale.ROOT)
-        LOWERCASE -> label.lowercase(Locale.ROOT)
-        REGULAR -> label
-    }
-
-    override fun toString(): String = displayName
 }
 
 private fun defaultFishingHotspotTypes(): MutableList<FishingHotspotType> =

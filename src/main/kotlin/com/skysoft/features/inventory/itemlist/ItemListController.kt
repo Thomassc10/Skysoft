@@ -503,7 +503,7 @@ object ItemListController {
         val status = SkyBlockDataRepository.status
         if (status.state != SkyBlockDataLoadState.READY) return emptyList()
         val query = ItemListState.search.trim()
-        if (!hasItemListQuery(query)) return emptyList()
+        if (query.isBlank()) return emptyList()
         val sources = SkysoftConfigGui.config().inventory.itemList.sources
         val currentKey = ItemFilterKey(
             query = query,
@@ -548,7 +548,7 @@ object ItemListController {
         }
         if (
             entries.isEmpty() &&
-            (SkyBlockDataRepository.status.state != SkyBlockDataLoadState.READY || hasItemListQuery(ItemListState.search))
+            (SkyBlockDataRepository.status.state != SkyBlockDataLoadState.READY || ItemListState.search.isNotBlank())
         ) {
             val status = SkyBlockDataRepository.status
             val text = when (status.state) {
@@ -682,8 +682,6 @@ private data class EntryHit(
     val key: ItemListEntryKey,
     val isCatalogEntry: Boolean,
 )
-
-internal fun hasItemListQuery(query: String): Boolean = query.isNotBlank()
 
 internal fun itemListScaleAfterEditorScroll(currentScale: Float, scrollY: Double): Float = when {
     scrollY > 0.0 -> currentScale + ItemListSettingsConfig.ITEM_SCALE_STEP

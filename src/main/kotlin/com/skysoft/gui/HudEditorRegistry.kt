@@ -13,15 +13,9 @@ object HudEditorRegistry {
 
     fun visibleElements(hasInventoryScreen: Boolean = false): List<HudEditorElement> =
         elements.values.filter {
-            isHudEditorElementVisible(it.isVisible(), it.requiresInventoryScreen, hasInventoryScreen)
+            it.isVisible() && (hasInventoryScreen || !it.requiresInventoryScreen)
         }
 }
-
-internal fun isHudEditorElementVisible(
-    isFeatureVisible: Boolean,
-    requiresInventoryScreen: Boolean,
-    hasInventoryScreen: Boolean,
-): Boolean = isFeatureVisible && (hasInventoryScreen || !requiresInventoryScreen)
 
 interface HudEditorElement {
     val id: String

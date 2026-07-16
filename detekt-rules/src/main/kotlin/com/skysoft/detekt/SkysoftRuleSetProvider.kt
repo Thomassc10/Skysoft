@@ -28,7 +28,6 @@ class SkysoftRuleSetProvider : RuleSetProvider {
             ruleSetId,
             mapOf(
                 RuleName("AmbiguousBooleanReturn") to ::AmbiguousBooleanReturn,
-                RuleName("LargeUngroupedConstantSet") to ::LargeUngroupedConstantSet,
             ),
         )
 }

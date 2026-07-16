@@ -2,14 +2,14 @@ package com.skysoft.utils.chat
 
 import com.skysoft.SkysoftMod
 import com.skysoft.utils.SkysoftMessage
-import com.skysoft.utils.SkysoftMessageBus
 import com.skysoft.utils.SkysoftMessageSource
-import com.skysoft.utils.SkysoftMessageVisibility
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object ChatEvents {
     private var visibleListeners: List<(ChatMessage) -> ChatMessageVisibility> = emptyList()
     private var actionBarListeners: List<(SkysoftMessage) -> ChatMessageVisibility> = emptyList()
+    private var visibleGameModifiers: List<(ChatMessage) -> Component> = emptyList()
     private var registered = false
 
     fun onVisibleMessage(listener: (ChatMessage) -> ChatMessageVisibility) {
@@ -34,22 +34,49 @@ object ChatEvents {
 
     fun onVisibleGameMessageModify(modifier: (ChatMessage) -> Component) {
         register()
-        SkysoftMessageBus.onGameModify { message ->
-            if (message.overlay) message.component else modifier(ChatMessageClassifier.classify(message))
-        }
+        visibleGameModifiers += modifier
     }
 
     private fun register() {
         if (registered) return
         registered = true
-        SkysoftMessageBus.onMessage { message ->
+
+        ClientReceiveMessageEvents.ALLOW_CHAT.register { message, _, _, _, _ ->
+            dispatchIncoming(SkysoftMessage(message, SkysoftMessageSource.CHAT)).allowsMessage
+        }
+        ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay ->
+            dispatchIncoming(SkysoftMessage(message, SkysoftMessageSource.GAME, overlay)).allowsMessage
+        }
+        ClientReceiveMessageEvents.MODIFY_GAME.register { message, overlay ->
+            if (overlay) message else modifyVisibleGameMessage(SkysoftMessage(message, SkysoftMessageSource.GAME))
+        }
+    }
+
+    private fun dispatchIncoming(message: SkysoftMessage): ChatMessageVisibility =
+        try {
             when {
                 message.source == SkysoftMessageSource.GAME && message.overlay -> dispatchActionBar(message)
                 !message.overlay -> dispatchVisible(ChatMessageClassifier.classify(message))
                 else -> ChatMessageVisibility.SHOW
-            }.toSkysoftMessageVisibility()
+            }
+        } catch (exception: Exception) {
+            SkysoftMod.LOGGER.error("Skysoft message listener failed", exception)
+            ChatMessageVisibility.SHOW
         }
-    }
+
+    private fun modifyVisibleGameMessage(message: SkysoftMessage): Component =
+        visibleGameModifiers.fold(message.component) { component, modifier ->
+            try {
+                modifier(
+                    ChatMessageClassifier.classify(
+                        SkysoftMessage(component, message.source, message.overlay),
+                    ),
+                )
+            } catch (exception: Exception) {
+                SkysoftMod.LOGGER.error("Skysoft game message modifier failed", exception)
+                component
+            }
+        }
 
     private fun dispatchVisible(message: ChatMessage): ChatMessageVisibility =
         dispatch(message, visibleListeners, "Skysoft visible chat listener failed")
@@ -73,12 +100,6 @@ object ChatEvents {
 
     private fun ChatMessageVisibility.combine(previous: ChatMessageVisibility): ChatMessageVisibility =
         if (this == ChatMessageVisibility.HIDE) this else previous
-
-    private fun ChatMessageVisibility.toSkysoftMessageVisibility(): SkysoftMessageVisibility =
-        when (this) {
-            ChatMessageVisibility.SHOW -> SkysoftMessageVisibility.SHOW
-            ChatMessageVisibility.HIDE -> SkysoftMessageVisibility.HIDE
-        }
 }
 
 enum class ChatMessageVisibility {

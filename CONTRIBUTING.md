@@ -22,7 +22,7 @@ On Linux or macOS:
 ./gradlew build
 ```
 
-The build validates every supported Minecraft version and runs detekt and Checkstyle.
+The build validates every supported Minecraft version and runs detekt.
 
 Bug reports and support are handled in the [official Discord server](https://discord.gg/akin).
 

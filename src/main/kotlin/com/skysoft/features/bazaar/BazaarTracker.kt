@@ -252,16 +252,16 @@ internal class BazaarTrackerRenderable(
         val tag = line.tag
         if (tag != null) {
             val tagText = tag.uppercase(Locale.US)
-            val tagWidth = LegacyTextRenderer.width("§l$tagText") + BazaarTrackerOverlayControls.TAG_BACKGROUND_EXTRA_WIDTH
+            val tagWidth = LegacyTextRenderer.width("§l$tagText") + TAG_BACKGROUND_EXTRA_WIDTH
             context.fill(x, y - 1, x + tagWidth, y + font.lineHeight + 1, line.tagColor)
             LegacyTextRenderer.draw(
                 context,
                 "§f§l$tagText",
-                x + BazaarTrackerOverlayControls.TAG_TEXT_X_OFFSET,
+                x + TAG_TEXT_X_OFFSET,
                 y,
-                defaultColor = BazaarTrackerColors.WHITE_TEXT,
+                defaultColor = WHITE_TEXT_COLOR,
             )
-            drawX += tagWidth + BazaarTrackerOverlayControls.TAG_TRAILING_GAP
+            drawX += tagWidth + TAG_TRAILING_GAP
         }
         var hovered: RelativeControlArea? = null
         for (segment in line.segments) {
@@ -270,7 +270,7 @@ internal class BazaarTrackerRenderable(
                 val area = controlArea(it, drawX, y, width)
                 if (mouseX != null && mouseY != null && area.contains(mouseX, mouseY)) hovered = area
             }
-            LegacyTextRenderer.draw(context, segment.text, drawX, y, defaultColor = BazaarTrackerColors.WHITE_TEXT)
+            LegacyTextRenderer.draw(context, segment.text, drawX, y, defaultColor = WHITE_TEXT_COLOR)
             drawX += width
         }
         return hovered
@@ -278,10 +278,10 @@ internal class BazaarTrackerRenderable(
 
     private fun controlArea(action: TrackerControl, x: Int, y: Int, width: Int) = RelativeControlArea(
         action = action,
-        x = x - BazaarTrackerOverlayControls.CONTROL_HIT_PADDING_X,
-        y = y - BazaarTrackerOverlayControls.CONTROL_HIT_PADDING_Y,
-        width = width + BazaarTrackerOverlayControls.CONTROL_HIT_PADDING_X * 2,
-        height = font.lineHeight + BazaarTrackerOverlayControls.CONTROL_HIT_PADDING_Y * 2,
+        x = x - CONTROL_HIT_PADDING_X,
+        y = y - CONTROL_HIT_PADDING_Y,
+        width = width + CONTROL_HIT_PADDING_X * 2,
+        height = font.lineHeight + CONTROL_HIT_PADDING_Y * 2,
         tooltipLines = trackerControlTooltip(action),
     )
 
@@ -289,7 +289,7 @@ internal class BazaarTrackerRenderable(
 
     private fun tagOffset(line: DisplayLine): Int {
         val tag = line.tag ?: return 0
-        return LegacyTextRenderer.width("§l${tag.uppercase(Locale.US)}") + BazaarTrackerOverlayControls.TAG_OFFSET_EXTRA_WIDTH
+        return LegacyTextRenderer.width("§l${tag.uppercase(Locale.US)}") + TAG_OFFSET_EXTRA_WIDTH
     }
 }
 
@@ -333,37 +333,23 @@ internal val cancelBuyTooltipPattern =
     )
 internal val cancelSellTooltipPattern = Regex("""refunded ([\d,.]+[kKmMbB]?)x (.+?)(?: from|\.|$)""", RegexOption.IGNORE_CASE)
 
-internal object BazaarTrackerHistorySettings {
-    const val MAX_RECENT_RESOLVED_ORDERS = 20
-    const val RECENT_RESOLVED_SUPPRESS_MILLIS = 5_000L
-}
-
-internal object BazaarTrackerTiming {
-    const val STATUS_ALERT_INTERVAL_TICKS = 20
-    const val OUTBID_SOUND_COOLDOWN_MILLIS = 60_000L
-    const val GUI_MISSING_PRUNE_CLICK_GRACE_MILLIS = 1_500L
-    const val GUI_MISSING_PRUNE_NEW_ORDER_GRACE_MILLIS = 1_500L
-    const val DUPLICATE_CLICK_SUPPRESS_MILLIS = 100L
-    const val FILL_HIGHLIGHT_MILLIS = 3_000L
-}
-
-internal object BazaarTrackerDisplayLimits {
-    const val VISIBLE_ORDER_LIMIT = 21
-    const val MIN_ORDERS = 1
-    const val MAX_ORDERS = 20
-}
-
-internal object BazaarTrackerStatusPriority {
-    const val FILLED = 3
-    const val WARNING = 2
-    const val COMPETITIVE = 1
-}
-
-internal object BazaarTrackerGuiPruning {
-    const val CONFIRM_SCANS = 3
-    const val MIN_CONFIRMATION_MILLIS = 1_500L
-    const val INVENTORY_STABLE_TICKS = 3
-}
+internal const val MAX_RECENT_RESOLVED_ORDERS = 20
+internal const val RECENT_RESOLVED_SUPPRESS_MILLIS = 5_000L
+internal const val STATUS_ALERT_INTERVAL_TICKS = 20
+internal const val OUTBID_SOUND_COOLDOWN_MILLIS = 60_000L
+internal const val GUI_MISSING_PRUNE_CLICK_GRACE_MILLIS = 1_500L
+internal const val GUI_MISSING_PRUNE_NEW_ORDER_GRACE_MILLIS = 1_500L
+internal const val DUPLICATE_CLICK_SUPPRESS_MILLIS = 100L
+internal const val FILL_HIGHLIGHT_MILLIS = 3_000L
+internal const val BAZAAR_ORDERS_GUI_VISIBLE_ORDER_LIMIT = 21
+internal const val MIN_TRACKER_DISPLAY_ORDERS = 1
+internal const val MAX_TRACKER_DISPLAY_ORDERS = 20
+internal const val FILLED_STATUS_PRIORITY = 3
+internal const val WARNING_STATUS_PRIORITY = 2
+internal const val COMPETITIVE_STATUS_PRIORITY = 1
+internal const val GUI_MISSING_PRUNE_CONFIRM_SCANS = 3
+internal const val GUI_MISSING_PRUNE_MIN_CONFIRMATION_MILLIS = 1_500L
+internal const val GUI_MISSING_PRUNE_INVENTORY_STABLE_TICKS = 3
 
 data class BazaarInvestmentPosition(
     val amount: Long,
@@ -388,57 +374,43 @@ internal fun bazaarInvestmentPosition(
     )
 }
 
-internal object BazaarTrackerTolerances {
-    const val EXACT_AMOUNT_EPSILON = 0.5
-    const val PERCENT_SCALE = 100.0
-    const val MIN_TAX_MULTIPLIER = 0.01
-    const val MATCH_RATE = 0.08
-    const val MIN_GUI_FILL = 1L
-    const val MIN_CANCEL_AMOUNT = 1L
-    const val MIN_CLAIM_AMOUNT = 2L
-    const val MIN_UNIT_PRICE = 2.0
-    const val TOTAL_RECALCULATION_EPSILON = 0.5
-}
-
-internal object BazaarTrackerOverlayControls {
-    const val CONTROL_HIT_PADDING_X = 2
-    const val CONTROL_HIT_PADDING_Y = 3
-    const val TAG_BACKGROUND_EXTRA_WIDTH = 6
-    const val TAG_TEXT_X_OFFSET = 3
-    const val TAG_TRAILING_GAP = 4
-    const val TAG_OFFSET_EXTRA_WIDTH = TAG_BACKGROUND_EXTRA_WIDTH + TAG_TRAILING_GAP
-}
-
-internal object BazaarTrackerSlotIndicators {
-    const val INSET = 1
-    const val SIZE = 18
-    const val END_OFFSET = SIZE - INSET
-    const val PARTIAL_MARKER_X_OFFSET = 10
-    const val PARTIAL_MARKER_Y_OFFSET = 8
-    const val PARTIAL_MARKER_TEXT_X_OFFSET = 11
-    const val PARTIAL_MARKER_TEXT_Y_OFFSET = 8
-    const val COMPETITIVE_FILL = 0x5530FF30
-    const val COMPETITIVE_OUTLINE = 0xFF30FF30.toInt()
-    const val UNDERCUT_FILL = 0x60FFD735
-    const val UNDERCUT_OUTLINE = 0xFFFFD735.toInt()
-    const val FILLED_FILL = 0x6045A3FF
-    const val FILLED_OUTLINE = 0xFF45A3FF.toInt()
-    const val PARTIAL_MARKER_BACKGROUND = 0xB0000000.toInt()
-    val PARTIAL_MARKER_TEXT_COLOR = 0xFFFFFF55.toInt()
-}
-
-internal object BazaarTrackerSounds {
-    const val FILLED_VOLUME = 1.6f
-    const val FILLED_PITCH = 0.8f
-    const val PARTIAL_VOLUME = 1.25f
-    const val PARTIAL_PITCH = 0.35f
-    const val OUTBID_VOLUME = 0.65f
-    const val OUTBID_PITCH = 0.7f
-}
-
-internal object BazaarTrackerColors {
-    val WHITE_TEXT = 0xFFFFFFFF.toInt()
-}
+internal const val EXACT_AMOUNT_EPSILON = 0.5
+internal const val BAZAAR_PERCENT_SCALE = 100.0
+internal const val MIN_BAZAAR_TAX_MULTIPLIER = 0.01
+internal const val BAZAAR_MATCH_TOLERANCE_RATE = 0.08
+internal const val MIN_GUI_FILL_TOLERANCE = 1L
+internal const val MIN_CANCEL_AMOUNT_TOLERANCE = 1L
+internal const val MIN_CLAIM_AMOUNT_TOLERANCE = 2L
+internal const val MIN_UNIT_PRICE_TOLERANCE = 2.0
+internal const val TOTAL_RECALCULATION_EPSILON = 0.5
+internal const val CONTROL_HIT_PADDING_X = 2
+internal const val CONTROL_HIT_PADDING_Y = 3
+internal const val TAG_BACKGROUND_EXTRA_WIDTH = 6
+internal const val TAG_TEXT_X_OFFSET = 3
+internal const val TAG_TRAILING_GAP = 4
+internal const val TAG_OFFSET_EXTRA_WIDTH = TAG_BACKGROUND_EXTRA_WIDTH + TAG_TRAILING_GAP
+internal const val SLOT_INDICATOR_INSET = 1
+internal const val SLOT_INDICATOR_SIZE = 18
+internal const val SLOT_INDICATOR_END_OFFSET = SLOT_INDICATOR_SIZE - SLOT_INDICATOR_INSET
+internal const val PARTIAL_MARKER_X_OFFSET = 10
+internal const val PARTIAL_MARKER_Y_OFFSET = 8
+internal const val PARTIAL_MARKER_TEXT_X_OFFSET = 11
+internal const val PARTIAL_MARKER_TEXT_Y_OFFSET = 8
+internal const val SLOT_COMPETITIVE_FILL = 0x5530FF30
+internal const val SLOT_COMPETITIVE_OUTLINE = 0xFF30FF30.toInt()
+internal const val SLOT_UNDERCUT_FILL = 0x60FFD735
+internal const val SLOT_UNDERCUT_OUTLINE = 0xFFFFD735.toInt()
+internal const val SLOT_FILLED_FILL = 0x6045A3FF
+internal const val SLOT_FILLED_OUTLINE = 0xFF45A3FF.toInt()
+internal const val PARTIAL_MARKER_BACKGROUND = 0xB0000000.toInt()
+internal val PARTIAL_MARKER_TEXT_COLOR = 0xFFFFFF55.toInt()
+internal const val FILLED_SOUND_VOLUME = 1.6f
+internal const val FILLED_SOUND_PITCH = 0.8f
+internal const val PARTIAL_SOUND_VOLUME = 1.25f
+internal const val PARTIAL_SOUND_PITCH = 0.35f
+internal const val OUTBID_SOUND_VOLUME = 0.65f
+internal const val OUTBID_SOUND_PITCH = 0.7f
+internal val WHITE_TEXT_COLOR = 0xFFFFFFFF.toInt()
 
 enum class BazaarOrderType(val label: String) {
     BUY("BUY"),

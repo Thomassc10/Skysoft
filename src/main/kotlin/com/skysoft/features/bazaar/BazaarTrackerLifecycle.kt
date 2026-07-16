@@ -27,8 +27,6 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.sounds.SoundEvents
 
 internal fun registerBazaarTracker() {
-    BazaarOrderBookApi.register()
-    BazaarCraftingRecipes.load()
     registerChatListeners()
     registerMouseClickCapture()
     ClientTickEvents.END_CLIENT_TICK.register { onClientTick() }
@@ -124,7 +122,7 @@ internal fun onClientTick() {
 }
 
 internal fun checkStatusAlerts() {
-    if (statusAlertTick++ % BazaarTrackerTiming.STATUS_ALERT_INTERVAL_TICKS != 0) return
+    if (statusAlertTick++ % STATUS_ALERT_INTERVAL_TICKS != 0) return
     val activeIds = storage.activeOrders.mapTo(mutableSetOf()) { it.id }
     lastAlertStatuses.keys.retainAll(activeIds)
     lastOutbidAlertMillis.keys.retainAll(activeIds)
@@ -136,7 +134,7 @@ internal fun checkStatusAlerts() {
         val previous = lastAlertStatuses.put(order.id, status) ?: continue
         if (!status.isWarning || previous.isWarning) continue
         val lastAlert = lastOutbidAlertMillis[order.id] ?: 0L
-        if (now - lastAlert < BazaarTrackerTiming.OUTBID_SOUND_COOLDOWN_MILLIS) continue
+        if (now - lastAlert < OUTBID_SOUND_COOLDOWN_MILLIS) continue
         lastOutbidAlertMillis[order.id] = now
         playAlertSound(BazaarTrackerSound.OUTBID_UNDERCUT)
     }
@@ -181,20 +179,20 @@ internal fun playAlertSound(sound: BazaarTrackerSound) {
         BazaarTrackerSound.FILLED ->
             SimpleSoundInstance.forUI(
                 SoundEvents.NOTE_BLOCK_PLING.value(),
-                BazaarTrackerSounds.FILLED_VOLUME,
-                BazaarTrackerSounds.FILLED_PITCH,
+                FILLED_SOUND_VOLUME,
+                FILLED_SOUND_PITCH,
             )
         BazaarTrackerSound.PARTIAL ->
             SimpleSoundInstance.forUI(
                 SoundEvents.EXPERIENCE_ORB_PICKUP,
-                BazaarTrackerSounds.PARTIAL_VOLUME,
-                BazaarTrackerSounds.PARTIAL_PITCH,
+                PARTIAL_SOUND_VOLUME,
+                PARTIAL_SOUND_PITCH,
             )
         BazaarTrackerSound.OUTBID_UNDERCUT ->
             SimpleSoundInstance.forUI(
                 SoundEvents.NOTE_BLOCK_BASS.value(),
-                BazaarTrackerSounds.OUTBID_VOLUME,
-                BazaarTrackerSounds.OUTBID_PITCH,
+                OUTBID_SOUND_VOLUME,
+                OUTBID_SOUND_PITCH,
             )
     }
     minecraft.soundManager.play(instance)

@@ -2,7 +2,7 @@ package com.skysoft.features.event.diana
 
 import com.skysoft.config.DianaBurrowBoxColorMode
 import com.skysoft.config.DianaClickCounterPosition
-import com.skysoft.config.DianaBurrowLabelFormat
+import com.skysoft.config.WaypointLabelFormat
 import com.skysoft.config.DianaDetailsConfig
 import com.skysoft.utils.ColorUtilities.COLOR_CHANNEL_MAX
 import com.skysoft.utils.ColorUtilities.COLOR_CHANNEL_MIN
@@ -13,7 +13,6 @@ import com.skysoft.utils.render.SkysoftRenderContext
 import com.skysoft.utils.render.WorldLabelPart
 import com.skysoft.utils.render.WorldLabelRenderer
 import com.skysoft.utils.render.WorldLabelStyle
-import com.skysoft.utils.render.WorldLineRenderer
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
@@ -28,7 +27,7 @@ internal object DianaBurrowRenderer {
         currentTarget: DianaBurrowTarget,
         drawCrosshairLine: Boolean,
         boldLabels: Boolean,
-        labelFormat: DianaBurrowLabelFormat,
+        labelFormat: WaypointLabelFormat,
         boxStyle: DianaBurrowBoxStyle,
         showClickCounter: Boolean,
         clickCounterPosition: DianaClickCounterPosition,
@@ -61,8 +60,7 @@ internal object DianaBurrowRenderer {
         if (drawCrosshairLine) {
             val currentTargetType = DianaBurrowInteractions.clickProgress(currentTarget)?.displayType
                 ?: currentTarget.type
-            WorldLineRenderer.drawToCrosshair(
-                context,
+            context.drawLineToCrosshair(
                 currentTarget.location.blockCenter(),
                 currentTargetType.outlineColor,
                 currentTargetType.lineWidth,
@@ -74,7 +72,7 @@ internal object DianaBurrowRenderer {
         context: SkysoftRenderContext,
         target: DianaBurrowTarget,
         boldLabels: Boolean,
-        labelFormat: DianaBurrowLabelFormat,
+        labelFormat: WaypointLabelFormat,
         boxStyle: DianaBurrowBoxStyle,
         showClickCounter: Boolean,
         clickCounterPosition: DianaClickCounterPosition,
@@ -107,7 +105,7 @@ internal object DianaBurrowRenderer {
         target: DianaBurrowTarget,
         displayType: DianaBurrowType,
         boldLabels: Boolean,
-        labelFormat: DianaBurrowLabelFormat,
+        labelFormat: WaypointLabelFormat,
         clickProgress: DianaBurrowClickProgress?,
         clickCounterPosition: DianaClickCounterPosition,
         visualAlphaScale: Double,
@@ -126,7 +124,7 @@ internal object DianaBurrowRenderer {
 
     private fun DianaBurrowType.labelComponent(
         boldLabels: Boolean,
-        labelFormat: DianaBurrowLabelFormat,
+        labelFormat: WaypointLabelFormat,
         visualAlphaScale: Double,
     ): Component {
         val textAlpha = textAlpha(visualAlphaScale)
@@ -226,7 +224,7 @@ internal object DianaBurrowRenderer {
     private data class LabelKey(
         val type: DianaBurrowType,
         val boldLabels: Boolean,
-        val labelFormat: DianaBurrowLabelFormat,
+        val labelFormat: WaypointLabelFormat,
         val textAlpha: Int,
     )
 

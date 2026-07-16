@@ -11,15 +11,11 @@ import net.hypixel.modapi.packet.impl.serverbound.ServerboundPartyInfoPacket
 import java.util.UUID
 
 object HypixelPartyApi {
-    private val listeners = mutableListOf<(HypixelPartyState) -> Unit>()
     private var isRegistered = false
     private var lastRequestAtMillis = 0L
     private var nextRefreshAtMillis = 0L
 
     var state: HypixelPartyState = HypixelPartyState.EMPTY
-        private set
-
-    var version: Long = 0
         private set
 
     val isLoaded: Boolean
@@ -48,14 +44,6 @@ object HypixelPartyApi {
             onTick()
         }
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> reset() }
-    }
-
-    fun refresh() {
-        requestPartyInfo(force = true)
-    }
-
-    fun onChange(listener: (HypixelPartyState) -> Unit) {
-        listeners += listener
     }
 
     fun member(uuid: UUID): HypixelPartyMember? =
@@ -105,27 +93,17 @@ object HypixelPartyApi {
         } else {
             emptyMap()
         }
-        updateState(
-            HypixelPartyState(
-                isInParty = packet.isInParty,
-                members = members,
-                updatedAtMillis = now,
-            ),
+        state = HypixelPartyState(
+            isInParty = packet.isInParty,
+            members = members,
+            updatedAtMillis = now,
         )
     }
 
     private fun reset() {
-        updateState(HypixelPartyState.EMPTY)
+        state = HypixelPartyState.EMPTY
         lastRequestAtMillis = 0L
         nextRefreshAtMillis = 0L
-    }
-
-    private fun updateState(nextState: HypixelPartyState) {
-        val hasChanged = state.isInParty != nextState.isInParty || state.members != nextState.members
-        state = nextState
-        if (!hasChanged) return
-        version++
-        listeners.toList().forEach { listener -> listener(nextState) }
     }
 
     private fun PartyRole.toSkysoftRole(): HypixelPartyRole =

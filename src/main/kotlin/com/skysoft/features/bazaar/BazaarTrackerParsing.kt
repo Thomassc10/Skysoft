@@ -11,7 +11,7 @@ import kotlin.math.roundToLong
 internal fun guiMatchIsPlausible(order: ProfileStorage.BazaarOrderData, parsed: PendingOrder): Boolean {
     if (
         parsed.amount > 0 &&
-        order.filledAmount >= parsed.amount + max(parsed.amountResolution, BazaarTrackerTolerances.MIN_GUI_FILL.toDouble())
+        order.filledAmount >= parsed.amount + max(parsed.amountResolution, MIN_GUI_FILL_TOLERANCE.toDouble())
     ) {
         return false
     }
@@ -126,8 +126,8 @@ private fun parseOrderNumbers(clean: List<String>, type: BazaarOrderType): Parse
         ?.let { parseNumber(it).value }
     val amount = amountParsed.value.roundToLong()
     val taxMultiplier = if (type == BazaarOrderType.SELL) {
-        (1.0 - (tax ?: storage.taxPercent) / BazaarTrackerTolerances.PERCENT_SCALE)
-            .coerceAtLeast(BazaarTrackerTolerances.MIN_TAX_MULTIPLIER)
+        (1.0 - (tax ?: storage.taxPercent) / BAZAAR_PERCENT_SCALE)
+            .coerceAtLeast(MIN_BAZAAR_TAX_MULTIPLIER)
     } else {
         1.0
     }

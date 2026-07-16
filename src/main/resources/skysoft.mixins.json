@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "AbstractContainerScreenMixin",
+    "AbstractContainerScreenRenderingMixin",
     "AbstractContainerScreenAccessor",
     "AbstractRecipeBookScreenMixin",
     "BufferBuilderMixin",
@@ -40,7 +41,6 @@
     "PlayerTabOverlayAccessor",
     "PictureInPictureRendererAccessor",
     "RecipeBookComponentAccessor",
-    "RenderPipelinesAccessor",
     "ScreenOverlayCursorMixin",
     "ServerPackDataAccessor",
     "ServerPackManagerMixin",

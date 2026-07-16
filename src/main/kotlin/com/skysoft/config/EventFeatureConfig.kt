@@ -15,7 +15,6 @@ import io.github.notenoughupdates.moulconfig.annotations.ConfigVisibleIf
 import io.github.notenoughupdates.moulconfig.observer.GetSetter
 import io.github.notenoughupdates.moulconfig.observer.Property
 import org.lwjgl.glfw.GLFW
-import java.util.Locale
 
 class EventFeatureConfig {
     @JvmField
@@ -192,7 +191,7 @@ guess
 Guess""",
     )
     @field:ConfigEditorDropdown
-    var labelFormat = DianaBurrowLabelFormat.CAPS
+    var labelFormat = WaypointLabelFormat.CAPS
 
     @JvmField
     @field:Expose
@@ -219,21 +218,6 @@ enum class DianaBurrowBoxColorMode(private val displayName: String) {
     DEFAULT("Default"),
     CUSTOM("Custom"),
     ;
-
-    override fun toString(): String = displayName
-}
-
-enum class DianaBurrowLabelFormat(private val displayName: String) {
-    CAPS("CAPS"),
-    LOWERCASE("nocaps"),
-    REGULAR("Regular"),
-    ;
-
-    fun format(label: String): String = when (this) {
-        CAPS -> label.uppercase(Locale.ROOT)
-        LOWERCASE -> label.lowercase(Locale.ROOT)
-        REGULAR -> label
-    }
 
     override fun toString(): String = displayName
 }

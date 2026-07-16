@@ -49,7 +49,7 @@ object GuiOverlayRegistry {
 
     private fun renderBelowScreenLayer(context: GuiGraphicsExtractor, overlayContext: GuiOverlayContext) {
         val screen = overlayContext.screen
-        if (screen == null || !GuiScaleController.scalesInventory(screen)) {
+        if (screen == null || !GuiScaleController.usesSeparateInventoryScale(screen)) {
             renderLayer(GuiOverlayLayer.BELOW_SCREEN, context, overlayContext)
             return
         }

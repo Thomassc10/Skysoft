@@ -33,11 +33,7 @@ object SkysoftPartyShare {
     fun partyCommand(message: String): String = "pc $message"
 
     fun sendParty(message: String, allowRecentPartyChatEvidence: Boolean = false) {
-        val sendCheck = partySendCheck(allowRecentPartyChatEvidence)
-        val blockedReason = sendCheck.blockedReason
-        if (blockedReason != null) {
-            return
-        }
+        if (partySendBlockedReason(allowRecentPartyChatEvidence) != null) return
         commandQueue.enqueue(message, allowRecentPartyChatEvidence)
     }
 
@@ -45,8 +41,12 @@ object SkysoftPartyShare {
         partyChatObservedUntilMillis = now + PARTY_CHAT_EVIDENCE_MILLIS
     }
 
-    internal fun partySendBlockedReason(allowRecentPartyChatEvidence: Boolean = false): String? =
-        partySendCheck(allowRecentPartyChatEvidence).blockedReason
+    internal fun partySendBlockedReason(allowRecentPartyChatEvidence: Boolean = false): String? = when {
+        HypixelPartyApi.isLoaded && HypixelPartyApi.isInParty -> null
+        allowRecentPartyChatEvidence && hasRecentPartyChatEvidence() -> null
+        !HypixelPartyApi.isLoaded -> "party state is not loaded"
+        else -> "player is not in a party"
+    }
 
     internal fun nextPartyCommand(now: Long = System.currentTimeMillis()): String? =
         commandQueue.nextPartyCommand(now)
@@ -122,21 +122,6 @@ object SkysoftPartyShare {
         Minecraft.getInstance().connection?.sendCommand(command)
     }
 
-    private fun partySendCheck(allowRecentPartyChatEvidence: Boolean): PartySendCheck =
-        if (HypixelPartyApi.isLoaded && HypixelPartyApi.isInParty) {
-            PartySendCheck(blockedReason = null, isAllowedByRecentPartyChat = false)
-        } else if (allowRecentPartyChatEvidence && hasRecentPartyChatEvidence()) {
-            PartySendCheck(blockedReason = null, isAllowedByRecentPartyChat = true)
-        } else {
-            PartySendCheck(
-                blockedReason = when {
-                    !HypixelPartyApi.isLoaded -> "party state is not loaded"
-                    else -> "player is not in a party"
-                },
-                isAllowedByRecentPartyChat = false,
-            )
-        }
-
     private fun hasRecentPartyChatEvidence(now: Long = System.currentTimeMillis()): Boolean =
         now <= partyChatObservedUntilMillis
 
@@ -149,11 +134,6 @@ object SkysoftPartyShare {
     private data class RecentSentPartyMessage(
         val message: String,
         val expiresAtMillis: Long,
-    )
-
-    private data class PartySendCheck(
-        val blockedReason: String?,
-        val isAllowedByRecentPartyChat: Boolean,
     )
 
     private const val SENT_MESSAGE_ECHO_WINDOW_MILLIS = 5_000L

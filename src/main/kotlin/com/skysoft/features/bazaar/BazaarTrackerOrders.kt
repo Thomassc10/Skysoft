@@ -43,8 +43,8 @@ internal fun isPlausibleCancelOrder(order: ProfileStorage.BazaarOrderData, cance
     if (amount < 0 || order.amountOrdered <= 0) return false
     val expectedUnfilled = (order.maximumAmount() - order.filledAmount).coerceAtLeast(0L)
     val tolerance = max(
-        BazaarTrackerTolerances.MIN_CANCEL_AMOUNT,
-        (max(amount, expectedUnfilled) * BazaarTrackerTolerances.MATCH_RATE).roundToLong(),
+        MIN_CANCEL_AMOUNT_TOLERANCE,
+        (max(amount, expectedUnfilled) * BAZAAR_MATCH_TOLERANCE_RATE).roundToLong(),
     )
     if (amount > order.maximumAmount() + tolerance) return false
     if (order.filledAmount > 0L && amount > expectedUnfilled + tolerance) return false
@@ -75,8 +75,8 @@ internal fun applySellCancel(order: ProfileStorage.BazaarOrderData, unsoldAmount
     if (soldTotal > order.claimedAmount) {
         order.amountOrdered = soldTotal
         order.filledAmount = soldTotal
-        val taxMultiplier = (1.0 - storage.taxPercent / BazaarTrackerTolerances.PERCENT_SCALE)
-            .coerceAtLeast(BazaarTrackerTolerances.MIN_TAX_MULTIPLIER)
+        val taxMultiplier = (1.0 - storage.taxPercent / BAZAAR_PERCENT_SCALE)
+            .coerceAtLeast(MIN_BAZAAR_TAX_MULTIPLIER)
         order.totalCoins = order.pricePerUnit * soldTotal * taxMultiplier
         order.updatedAtMillis = System.currentTimeMillis()
     } else {
@@ -141,8 +141,8 @@ internal fun isPlausibleClaimOrder(
     if (
         remaining > 0 &&
         amount > remaining + max(
-            BazaarTrackerTolerances.MIN_CLAIM_AMOUNT,
-            (remaining * BazaarTrackerTolerances.MATCH_RATE).roundToLong(),
+            MIN_CLAIM_AMOUNT_TOLERANCE,
+            (remaining * BAZAAR_MATCH_TOLERANCE_RATE).roundToLong(),
         )
     ) {
         return false
@@ -152,7 +152,7 @@ internal fun isPlausibleClaimOrder(
             order.pricePerUnitResolution,
             unitPrice,
             0.0,
-            BazaarTrackerTolerances.MIN_UNIT_PRICE,
+            MIN_UNIT_PRICE_TOLERANCE,
         )
     ) {
         return false
@@ -163,8 +163,8 @@ internal fun isPlausibleClaimOrder(
 internal fun pruneOrdersMissingFromGui(matchedOrderIds: Set<String>, parsedOrders: List<PendingOrder>): ChangeResult {
     check(parsedOrders.isNotEmpty()) { "Missing order pruning requires parsed order rows" }
     val now = System.currentTimeMillis()
-    val recentlyClickedOrder = now - lastOrdersGuiClickMillis < BazaarTrackerTiming.GUI_MISSING_PRUNE_CLICK_GRACE_MILLIS
-    val visibleScanMayBeWindowed = parsedOrders.size >= BazaarTrackerDisplayLimits.VISIBLE_ORDER_LIMIT &&
+    val recentlyClickedOrder = now - lastOrdersGuiClickMillis < GUI_MISSING_PRUNE_CLICK_GRACE_MILLIS
+    val visibleScanMayBeWindowed = parsedOrders.size >= BAZAAR_ORDERS_GUI_VISIBLE_ORDER_LIMIT &&
         storage.activeOrders.any { it.id !in matchedOrderIds }
     var changed = false
     val iterator = storage.activeOrders.iterator()
@@ -184,8 +184,8 @@ internal fun pruneOrdersMissingFromGui(matchedOrderIds: Set<String>, parsedOrder
             )
             missingFromOrdersGuiScans[order.id] = observation
             if (
-                observation.scans >= BazaarTrackerGuiPruning.CONFIRM_SCANS &&
-                now - observation.firstObservedAtMillis >= BazaarTrackerGuiPruning.MIN_CONFIRMATION_MILLIS
+                observation.scans >= GUI_MISSING_PRUNE_CONFIRM_SCANS &&
+                now - observation.firstObservedAtMillis >= GUI_MISSING_PRUNE_MIN_CONFIRMATION_MILLIS
             ) {
                 rememberResolvedOrder(order)
                 iterator.remove()
@@ -204,7 +204,7 @@ internal fun shouldPruneMissingFromGui(
 ): Boolean {
     if (recentlyClickedOrder) return false
     if (pendingCancel?.orderId == order.id) return false
-    if (now - order.createdAtMillis < BazaarTrackerTiming.GUI_MISSING_PRUNE_NEW_ORDER_GRACE_MILLIS) return false
+    if (now - order.createdAtMillis < GUI_MISSING_PRUNE_NEW_ORDER_GRACE_MILLIS) return false
 
     // If we have seen this order in a real Bazaar Orders slot before, then a stable scan
     // where it did not match any current order means the tracked entry is stale. This catches

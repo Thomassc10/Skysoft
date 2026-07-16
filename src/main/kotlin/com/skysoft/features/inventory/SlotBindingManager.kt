@@ -6,7 +6,8 @@ import com.skysoft.data.ProfileStorageApi
 import com.skysoft.data.ProfileStorage
 import com.skysoft.data.hypixel.HypixelLocationState
 import com.skysoft.data.skyblock.SkyBlockMenuItem.isSkyBlockMenu
-import com.skysoft.gui.tooltip.SkysoftTooltipRenderer
+import com.skysoft.gui.OverlayControlMouse
+import com.skysoft.gui.tooltip.SkysoftNativeTooltip
 import com.skysoft.mixin.AbstractContainerScreenAccessor
 import com.skysoft.utils.ColorUtilities.hasVisibleAlpha
 import com.skysoft.utils.ColorUtilities.toPackedArgb
@@ -128,7 +129,8 @@ object SlotBindingManager {
         val tooltip = pendingTooltip ?: return
         pendingTooltip = null
         context.nextStratum()
-        Renderer.renderTooltipAtNormalGuiScale(context, tooltip)
+        val (mouseX, mouseY) = OverlayControlMouse.deferredTooltipPoint(tooltip.mouseX, tooltip.mouseY)
+        SkysoftNativeTooltip.setForNextFrame(context, tooltip.lines, mouseX, mouseY)
     }
 
     @JvmStatic
@@ -346,10 +348,6 @@ object SlotBindingManager {
     }
 
     private object Renderer {
-        fun renderTooltipAtNormalGuiScale(context: GuiGraphicsExtractor, tooltip: PendingTooltip) {
-            SkysoftTooltipRenderer.renderAtNormalGuiScale(context, tooltip.lines, tooltip.mouseX, tooltip.mouseY)
-        }
-
         fun bindingOutlineColor(): Int = bindingColor(alphaScale = 1.0)
 
         fun bindingLineColor(): Int = bindingColor(alphaScale = LINE_ALPHA_SCALE)
@@ -504,7 +502,7 @@ object SlotBindingManager {
 
         fun slotTopLeft(screen: AbstractContainerScreen<*>, slot: Slot): Point {
             val accessor = screen as AbstractContainerScreenAccessor
-            return Point(accessor.`skysoft$getLeftPos`() + slot.x, accessor.`skysoft$getTopPos`() + slot.y)
+            return Point(accessor.skysoftGetLeftPos() + slot.x, accessor.skysoftGetTopPos() + slot.y)
         }
 
         fun slotCenter(screen: AbstractContainerScreen<*>, slot: Slot): Point {

@@ -164,8 +164,8 @@ internal fun flipOrder(amount: Long, itemName: String, expectedProfit: Double) {
     }
 
     val sellPricePerUnit = costPerUnit + expectedProfit / amount.coerceAtLeast(1)
-    val taxMultiplier = (1.0 - storage.taxPercent / BazaarTrackerTolerances.PERCENT_SCALE)
-        .coerceAtLeast(BazaarTrackerTolerances.MIN_TAX_MULTIPLIER)
+    val taxMultiplier = (1.0 - storage.taxPercent / BAZAAR_PERCENT_SCALE)
+        .coerceAtLeast(MIN_BAZAAR_TAX_MULTIPLIER)
     val totalCoins = sellPricePerUnit * amount * taxMultiplier
     val sellOrder = ProfileStorage.BazaarOrderData(
         type = BazaarOrderType.SELL,
@@ -226,7 +226,7 @@ internal fun markFilled(type: BazaarOrderType, amount: Long, itemName: String) {
                 it.amountResolution,
                 amount.toDouble(),
                 0.0,
-                BazaarTrackerTolerances.EXACT_AMOUNT_EPSILON,
+                EXACT_AMOUNT_EPSILON,
             )
         }
         .filter { it.filledAmount < it.maximumAmount() }

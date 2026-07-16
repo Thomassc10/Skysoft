@@ -209,9 +209,9 @@ private fun moveBazaarOrderMenuSlot(screen: ContainerScreen, slot: Slot, row: In
 private fun applyBazaarOrderMenuRows(screen: ContainerScreen, rows: Int) {
     val height = BazaarOrderMenuLayout.BASE_HEIGHT + rows * BazaarOrderMenuLayout.SLOT_STEP
     val accessor = screen as AbstractContainerScreenAccessor
-    accessor.`skysoft$setImageHeight`(height)
-    accessor.`skysoft$setTopPos`((screen.height - height) / 2)
-    accessor.`skysoft$setInventoryLabelY`(height - BazaarOrderMenuLayout.INVENTORY_LABEL_OFFSET)
+    accessor.skysoftSetImageHeight(height)
+    accessor.skysoftSetTopPos((screen.height - height) / 2)
+    accessor.skysoftSetInventoryLabelY(height - BazaarOrderMenuLayout.INVENTORY_LABEL_OFFSET)
 }
 
 private object BazaarOrderMenuLayout {

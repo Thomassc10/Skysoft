@@ -349,13 +349,7 @@ object BetterShurikens {
                 ?.first
 
         private fun nearestEndpointMob(end: Vec3, candidates: List<LivingEntity>): LivingEntity? =
-            candidates.map { mob ->
-                val bounds = mob.boundingBox
-                val dx = maxOf(bounds.minX - end.x, 0.0, end.x - bounds.maxX)
-                val dy = maxOf(bounds.minY - end.y, 0.0, end.y - bounds.maxY)
-                val dz = maxOf(bounds.minZ - end.z, 0.0, end.z - bounds.maxZ)
-                mob to (dx * dx + dy * dy + dz * dz)
-            }
+            candidates.map { mob -> mob to mob.boundingBox.distanceToSqr(end) }
                 .minByOrNull { (_, distance) -> distance }
                 ?.takeIf { (_, distance) -> distance <= Detection.MAX_ENDPOINT_HIT_DISTANCE_SQUARED }
                 ?.first

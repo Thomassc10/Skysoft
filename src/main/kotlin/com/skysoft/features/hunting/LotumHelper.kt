@@ -5,18 +5,16 @@ import com.skysoft.data.SkyBlockIsland
 import com.skysoft.events.entity.EntityInteractionEvents
 import com.skysoft.utils.ColorUtilities.addAlpha
 import com.skysoft.utils.EntityUtilities.cleanName
-import com.skysoft.utils.LocationUtilities.distanceToPlayer
-import com.skysoft.utils.LegacyTextColor
 import com.skysoft.utils.getWorldVec
 import com.skysoft.utils.render.EntityHighlightRenderer
 import com.skysoft.utils.render.SkysoftRenderContext
-import com.skysoft.utils.render.WorldLineRenderer
 import com.skysoft.utils.render.WorldRenderDispatcher
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.animal.frog.Frog
 import net.minecraft.world.entity.decoration.ArmorStand
+import java.awt.Color
 import kotlin.math.hypot
 
 object LotumHelper {
@@ -27,6 +25,7 @@ object LotumHelper {
     private const val LOTUM_FROG_HORIZONTAL_RANGE = 1.5
     private const val LOTUM_SCAN_INTERVAL_TICKS = 5
     private const val LOTUM_HIGHLIGHT_ALPHA = 80
+    private val LOTUM_COLOR = Color(85, 255, 85)
 
     private val trackedLotums = mutableSetOf<ArmorStand>()
     private val highlightedLotums = mutableSetOf<Int>()
@@ -78,18 +77,18 @@ object LotumHelper {
         }
         removeInvalidLotums()
 
-        val closestLotum = trackedLotums.minByOrNull { it.distanceToPlayer() } ?: return
+        val player = Minecraft.getInstance().player ?: return
+        val closestLotum = trackedLotums.minByOrNull { it.distanceToSqr(player) } ?: return
 
-        WorldLineRenderer.drawToCrosshair(
-            context,
+        context.drawLineToCrosshair(
             closestLotum.getWorldVec(),
-            LegacyTextColor.GREEN.toColor(),
+            LOTUM_COLOR,
         )
     }
 
     private fun highlightLotum(lotum: Frog) {
         if (!highlightedLotums.add(lotum.id)) return
-        EntityHighlightRenderer.setEntityColor(lotum, LegacyTextColor.GREEN.toColor().addAlpha(LOTUM_HIGHLIGHT_ALPHA)) {
+        EntityHighlightRenderer.setEntityColor(lotum, LOTUM_COLOR.addAlpha(LOTUM_HIGHLIGHT_ALPHA)) {
             config.enabled && config.settings.highlightLotums && SkyBlockIsland.LOTUS_ATOLL.isInIsland() && lotum.isAlive
         }
     }

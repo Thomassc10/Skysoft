@@ -499,8 +499,8 @@ class FullInventoryConfig {
 
     fun repairLoadedValues() {
         settings.emptySlots = settings.emptySlots.coerceIn(
-            FullInventoryLimits.MIN_EMPTY_SLOTS,
-            FullInventoryLimits.MAX_EMPTY_SLOTS,
+            MIN_FULL_INVENTORY_EMPTY_SLOTS,
+            MAX_FULL_INVENTORY_EMPTY_SLOTS,
         )
     }
 }
@@ -513,7 +513,7 @@ class FullInventorySettingsConfig {
         desc = "Warn when your inventory has this many empty slots or less. 0 means only when full.",
     )
     @field:ConfigEditorSlider(minValue = 0f, maxValue = 36f, minStep = 1f)
-    var emptySlots = FullInventoryLimits.DEFAULT_EMPTY_SLOTS
+    var emptySlots = DEFAULT_FULL_INVENTORY_EMPTY_SLOTS
 }
 
 class FullInventoryDetailsConfig {
@@ -545,8 +545,8 @@ class SmoothSwappingConfig {
 
     fun repairLoadedValues() {
         settings.animationSpeed = settings.animationSpeed.coerceIn(
-            SmoothSwappingLimits.MIN_SPEED,
-            SmoothSwappingLimits.MAX_SPEED,
+            MIN_SMOOTH_SWAPPING_SPEED,
+            MAX_SMOOTH_SWAPPING_SPEED,
         )
     }
 }
@@ -556,7 +556,7 @@ class SmoothSwappingSettingsConfig {
     @field:Expose
     @field:ConfigOption(name = "Animation Speed", desc = "How quickly items move between slots. 100 matches the default speed.")
     @field:ConfigEditorSlider(minValue = 25f, maxValue = 300f, minStep = 5f)
-    var animationSpeed = SmoothSwappingLimits.DEFAULT_SPEED
+    var animationSpeed = DEFAULT_SMOOTH_SWAPPING_SPEED
 }
 
 class SmoothSwappingDetailsConfig {
@@ -597,16 +597,16 @@ class TooltipScrollConfig {
 
     fun repairLoadedValues() {
         settings.mouseScrollingSpeed = settings.mouseScrollingSpeed.coerceIn(
-            TooltipScrollLimits.MIN_SPEED,
-            TooltipScrollLimits.MAX_SPEED,
+            MIN_TOOLTIP_SCROLL_SPEED,
+            MAX_TOOLTIP_SCROLL_SPEED,
         )
         settings.keyboardScrollingSpeed = settings.keyboardScrollingSpeed.coerceIn(
-            TooltipScrollLimits.MIN_SPEED,
-            TooltipScrollLimits.MAX_SPEED,
+            MIN_TOOLTIP_SCROLL_SPEED,
+            MAX_TOOLTIP_SCROLL_SPEED,
         )
         details.scrollSmoothness = details.scrollSmoothness.coerceIn(
-            TooltipScrollLimits.MIN_SMOOTHNESS,
-            TooltipScrollLimits.MAX_SMOOTHNESS,
+            MIN_TOOLTIP_SCROLL_SMOOTHNESS,
+            MAX_TOOLTIP_SCROLL_SMOOTHNESS,
         )
     }
 }
@@ -637,13 +637,13 @@ class TooltipScrollSettingsConfig {
     @field:Expose
     @field:ConfigOption(name = "Mouse Scrolling Speed", desc = "Pixels moved per mouse-wheel step.")
     @field:ConfigEditorSlider(minValue = 1f, maxValue = 40f, minStep = 1f)
-    var mouseScrollingSpeed = TooltipScrollLimits.DEFAULT_MOUSE_SPEED
+    var mouseScrollingSpeed = DEFAULT_TOOLTIP_SCROLL_SPEED
 
     @JvmField
     @field:Expose
     @field:ConfigOption(name = "Keyboard Scrolling Speed", desc = "Pixels moved per tick while a tooltip movement key is held.")
     @field:ConfigEditorSlider(minValue = 1f, maxValue = 40f, minStep = 1f)
-    var keyboardScrollingSpeed = TooltipScrollLimits.DEFAULT_KEYBOARD_SPEED
+    var keyboardScrollingSpeed = DEFAULT_TOOLTIP_KEYBOARD_SCROLL_SPEED
 
     @JvmField
     @field:Expose
@@ -705,7 +705,7 @@ class TooltipScrollDetailsConfig {
     @field:Expose
     @field:ConfigOption(name = "Scroll Smoothness", desc = "How quickly tooltips slide toward the moved position. 100 is instant.")
     @field:ConfigEditorSlider(minValue = 5f, maxValue = 100f, minStep = 5f)
-    var scrollSmoothness = TooltipScrollLimits.DEFAULT_SMOOTHNESS
+    var scrollSmoothness = DEFAULT_TOOLTIP_SCROLL_SMOOTHNESS
 }
 
 class InventoryButtonConfig(
@@ -721,7 +721,7 @@ class InventoryButtonConfig(
     fun isActive(): Boolean = command.trim().isNotEmpty()
 
     fun repairLoadedValues() {
-        backgroundIndex = backgroundIndex.coerceIn(InventoryButtonLimits.MIN_BACKGROUND_INDEX, InventoryButtonLimits.MAX_BACKGROUND_INDEX)
+        backgroundIndex = backgroundIndex.coerceIn(MIN_BUTTON_BACKGROUND_INDEX, MAX_BUTTON_BACKGROUND_INDEX)
         command = command.trimStart()
         icon = icon?.trim()?.takeIf { it.isNotEmpty() }
     }
@@ -747,11 +747,11 @@ class StorageOverlayConfig {
     val details = StorageOverlayDetailsConfig()
 
     fun repairLoadedValues() {
-        details.columns = details.columns.coerceIn(StorageOverlayLimits.MIN_COLUMNS, StorageOverlayLimits.MAX_COLUMNS)
-        details.height = details.height.coerceIn(StorageOverlayLimits.MIN_HEIGHT, StorageOverlayLimits.MAX_HEIGHT)
+        details.columns = details.columns.coerceIn(MIN_STORAGE_COLUMNS, MAX_STORAGE_COLUMNS)
+        details.height = details.height.coerceIn(MIN_STORAGE_HEIGHT, MAX_STORAGE_HEIGHT)
         details.scrollSpeed = details.scrollSpeed.coerceIn(
-            StorageOverlayLimits.MIN_SCROLL_SPEED,
-            StorageOverlayLimits.MAX_SCROLL_SPEED,
+            MIN_STORAGE_SCROLL_SPEED,
+            MAX_STORAGE_SCROLL_SPEED,
         )
     }
 }
@@ -857,8 +857,8 @@ class SkysoftBazaarConfig {
 
     fun repairLoadedValues() {
         settings.maxOrders = settings.maxOrders.coerceIn(
-            BazaarTrackerConfigLimits.MIN_ORDERS,
-            BazaarTrackerConfigLimits.MAX_ORDERS,
+            MIN_BAZAAR_TRACKER_ORDERS,
+            MAX_BAZAAR_TRACKER_ORDERS,
         )
     }
 }
@@ -930,44 +930,27 @@ class BazaarTrackerDetailsConfig {
     var visualIndicators = true
 }
 
-object FullInventoryLimits {
-    const val MIN_EMPTY_SLOTS = 0
-    const val MAX_EMPTY_SLOTS = 36
-    const val DEFAULT_EMPTY_SLOTS = 0
-}
-
-object SmoothSwappingLimits {
-    const val MIN_SPEED = 25
-    const val MAX_SPEED = 300
-    const val DEFAULT_SPEED = 125
-    const val DEFAULT_DURATION = 180
-}
-
-private object TooltipScrollLimits {
-    const val MIN_SPEED = 1
-    const val MAX_SPEED = 40
-    const val DEFAULT_MOUSE_SPEED = 10
-    const val DEFAULT_KEYBOARD_SPEED = 5
-    const val MIN_SMOOTHNESS = 5
-    const val MAX_SMOOTHNESS = 100
-    const val DEFAULT_SMOOTHNESS = 25
-}
-
-private object InventoryButtonLimits {
-    const val MIN_BACKGROUND_INDEX = 0
-    const val MAX_BACKGROUND_INDEX = 6
-}
-
-private object StorageOverlayLimits {
-    const val MIN_COLUMNS = 1
-    const val MAX_COLUMNS = 5
-    const val MIN_HEIGHT = 96
-    const val MAX_HEIGHT = 360
-    const val MIN_SCROLL_SPEED = 1
-    const val MAX_SCROLL_SPEED = 40
-}
-
-private object BazaarTrackerConfigLimits {
-    const val MIN_ORDERS = 1
-    const val MAX_ORDERS = 20
-}
+const val MIN_FULL_INVENTORY_EMPTY_SLOTS = 0
+const val MAX_FULL_INVENTORY_EMPTY_SLOTS = 36
+const val DEFAULT_FULL_INVENTORY_EMPTY_SLOTS = 0
+const val MIN_TOOLTIP_SCROLL_SPEED = 1
+const val MAX_TOOLTIP_SCROLL_SPEED = 40
+const val DEFAULT_TOOLTIP_SCROLL_SPEED = 10
+const val DEFAULT_TOOLTIP_KEYBOARD_SCROLL_SPEED = 5
+const val MIN_TOOLTIP_SCROLL_SMOOTHNESS = 5
+const val MAX_TOOLTIP_SCROLL_SMOOTHNESS = 100
+const val DEFAULT_TOOLTIP_SCROLL_SMOOTHNESS = 25
+const val MIN_SMOOTH_SWAPPING_SPEED = 25
+const val MAX_SMOOTH_SWAPPING_SPEED = 300
+const val DEFAULT_SMOOTH_SWAPPING_SPEED = 125
+const val DEFAULT_SMOOTH_SWAPPING_DURATION = 180
+private const val MIN_BUTTON_BACKGROUND_INDEX = 0
+private const val MAX_BUTTON_BACKGROUND_INDEX = 6
+private const val MIN_STORAGE_COLUMNS = 1
+private const val MAX_STORAGE_COLUMNS = 5
+private const val MIN_STORAGE_HEIGHT = 96
+private const val MAX_STORAGE_HEIGHT = 360
+private const val MIN_STORAGE_SCROLL_SPEED = 1
+private const val MAX_STORAGE_SCROLL_SPEED = 40
+private const val MIN_BAZAAR_TRACKER_ORDERS = 1
+private const val MAX_BAZAAR_TRACKER_ORDERS = 20

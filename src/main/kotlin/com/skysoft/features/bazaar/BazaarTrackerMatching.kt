@@ -35,7 +35,7 @@ internal fun orderMatchesParsedIdentity(order: ProfileStorage.BazaarOrderData, p
             order.amountResolution,
             parsed.amount.toDouble(),
             parsed.amountResolution,
-            BazaarTrackerTolerances.EXACT_AMOUNT_EPSILON,
+            EXACT_AMOUNT_EPSILON,
         )
     ) {
         return false

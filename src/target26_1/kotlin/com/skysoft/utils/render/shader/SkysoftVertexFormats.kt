@@ -8,25 +8,19 @@ import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.blaze3d.vertex.VertexFormatElement
 import org.lwjgl.system.MemoryUtil
 
-private typealias VFEType = VertexFormatElement.Type
-
 object SkysoftVertexFormats {
     private val lastRegisteredId by lazy {
         (0 until VertexFormatElement.MAX_COUNT).filter { VertexFormatElement.byId(it) != null }.max()
     }
 
-    enum class VertexElement(
-        private val index: Int = 0,
-        private val type: VFEType = VFEType.FLOAT,
-        private val count: Int = 4,
-    ) {
+    enum class VertexElement {
         ROUNDED_PARAMS_0,
         ROUNDED_PARAMS_1,
         ;
 
         private val registrationId: Int by lazy { lastRegisteredId + ordinal + 1 }
         val element: VertexFormatElement by lazy {
-            safeRegister(registrationId, index, type, false, count)
+            safeRegister(registrationId)
         }
     }
 
@@ -39,15 +33,9 @@ object SkysoftVertexFormats {
             .build()
     }
 
-    private fun safeRegister(
-        desiredId: Int,
-        index: Int = 0,
-        type: VFEType = VFEType.FLOAT,
-        normalized: Boolean = false,
-        count: Int = 4,
-    ): VertexFormatElement {
+    private fun safeRegister(desiredId: Int): VertexFormatElement {
         val id = (desiredId until VertexFormatElement.MAX_COUNT).first { VertexFormatElement.byId(it) == null }
-        return VertexFormatElement.register(id, index, type, normalized, count)
+        return VertexFormatElement.register(id, 0, VertexFormatElement.Type.FLOAT, false, PARAMETER_COMPONENT_COUNT)
     }
 
     fun BufferBuilder.writeParams(
@@ -57,7 +45,7 @@ object SkysoftVertexFormats {
         w: Float,
         format: VertexElement,
     ) {
-        val ptr = (this@writeParams as VertexMemoryAccess).`skysoft$attributeAddress`(format.element, 0)
+        val ptr = (this@writeParams as VertexMemoryAccess).skysoftAttributeAddress(format.element, 0)
         writeParams(ptr, x, y, z, w, format.name)
     }
 
@@ -70,6 +58,7 @@ object SkysoftVertexFormats {
     }
 
     private const val FLOAT_BYTE_SIZE = 4L
+    private const val PARAMETER_COMPONENT_COUNT = 4
     private const val Y_COMPONENT_BYTE_OFFSET = FLOAT_BYTE_SIZE
     private const val Z_COMPONENT_BYTE_OFFSET = FLOAT_BYTE_SIZE * 2
     private const val W_COMPONENT_BYTE_OFFSET = FLOAT_BYTE_SIZE * 3

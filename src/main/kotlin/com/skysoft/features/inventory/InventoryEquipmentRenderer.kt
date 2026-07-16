@@ -10,6 +10,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.minecraft.world.SimpleContainer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.Slot
@@ -17,6 +18,8 @@ import net.minecraft.world.item.ItemStack
 
 private val openStatsTooltip = Component.literal("Open /stats").withStyle(ChatFormatting.GRAY)
 private val equipmentSlotLayouts = IdentityHashMap<AbstractContainerScreen<*>, InventoryEquipmentSlotLayout>()
+private val slotHighlightBackSprite = Identifier.withDefaultNamespace("container/slot_highlight_back")
+private val slotHighlightFrontSprite = Identifier.withDefaultNamespace("container/slot_highlight_front")
 
 internal fun renderInventoryEquipment(
     screen: AbstractContainerScreen<*>,
@@ -34,7 +37,7 @@ internal fun renderInventoryEquipment(
         val renderBounds = geometry.localBounds
         if (hovered) drawEquipmentHighlight(context, renderBounds, front = false)
         val slot = slots[index]
-        (screen as AbstractContainerScreenAccessor).`skysoft$extractSlot`(context, slot, mouseX, mouseY)
+        (screen as AbstractContainerScreenAccessor).skysoftExtractSlot(context, slot, mouseX, mouseY)
         drawInventoryEquipmentSlotRightEdge(context, renderBounds, index)
         if (hovered) {
             drawEquipmentHighlight(context, renderBounds, front = true)
@@ -58,9 +61,9 @@ internal fun isInventoryEquipmentSlot(slot: Slot?): Boolean = slot is InventoryE
 
 private fun drawEquipmentHighlight(context: GuiGraphicsExtractor, bounds: Rect, front: Boolean) {
     val sprite = if (front) {
-        AbstractContainerScreenAccessor.`skysoft$getSlotHighlightFrontSprite`()
+        slotHighlightFrontSprite
     } else {
-        AbstractContainerScreenAccessor.`skysoft$getSlotHighlightBackSprite`()
+        slotHighlightBackSprite
     }
     context.blitSprite(
         RenderPipelines.GUI_TEXTURED,

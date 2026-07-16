@@ -62,8 +62,8 @@ internal fun storageOverlayLayoutScreen(
     val pageLayouts = pageLayoutResult.pages
 
     val accessor = screen as AbstractContainerScreenAccessor
-    val left = accessor.`skysoft$getLeftPos`()
-    val top = accessor.`skysoft$getTopPos`()
+    val left = accessor.skysoftGetLeftPos()
+    val top = accessor.skysoftGetTopPos()
     val playerInventory = Minecraft.getInstance().player?.inventory
     for (slot in screen.menu.slots) {
         val position = when {
@@ -256,13 +256,13 @@ internal fun routeOverviewShortcutClick(
         return InputHandlingResult.IGNORED
     }
     redirectedOverviewScreenId = System.identityHashCode(screen)
-    (screen as AbstractContainerScreenAccessor).`skysoft$slotClicked`(
+    (screen as AbstractContainerScreenAccessor).skysoftSlotClicked(
         slot,
         slot.index,
         button,
         ContainerInput.PICKUP,
     )
-    screen.`skysoft$setSkipNextRelease`(true)
+    screen.skysoftSetSkipNextRelease(true)
     return InputHandlingResult.CONSUMED
 }
 

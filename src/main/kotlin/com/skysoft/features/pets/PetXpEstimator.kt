@@ -120,7 +120,7 @@ object PetXpEstimator {
             if (petData.uuid == currentPetUuid) {
                 return@forEach
             }
-            val itemRate = if (petData.heldItemInternalName == PetXpItemIds.EXP_SHARE) PetXpRates.EXP_SHARE_ITEM_RATE else 0.0
+            val itemRate = if (petData.heldItemInternalName == EXP_SHARE) EXP_SHARE_ITEM_RATE else 0.0
             val rate = baseRate + whyNotMoreRate + itemRate
             if (rate <= 0.0) {
                 return@forEach
@@ -203,11 +203,11 @@ private class PetSkillGainTracker {
 
     fun readSkillGains(event: SkillExpGainApi.SkillExpGain, currentPetUuid: UUID?): List<SkillGainRead> {
         val totalXp = event.totalXp?.takeIf { it > 0.0 }
-        if (event.source == PetXpSources.ACTION_BAR && event.gained > 0.0) rememberGainQuantum(event.skill, event.gained)
+        if (event.source == ACTION_BAR_EXP_SOURCE && event.gained > 0.0) rememberGainQuantum(event.skill, event.gained)
         val previous = skillSamples[event.skill]
         val previousTotalXp = previous?.totalXp ?: initialPreviousTotal(event, totalXp, previous)
 
-        if (event.source != PetXpSources.ACTION_BAR) {
+        if (event.source != ACTION_BAR_EXP_SOURCE) {
             return readNonActionbarSkillGain(event, totalXp, previousTotalXp, previous, currentPetUuid)
         }
 
@@ -218,7 +218,7 @@ private class PetSkillGainTracker {
             else -> rememberSkillSampleAndReturn(
                 event.skill,
                 totalXp,
-                totalXp?.plus(PetXpEstimation.ESTIMATED_TOTAL_FRACTION),
+                totalXp?.plus(ESTIMATED_TOTAL_FRACTION),
                 currentPetUuid,
                 singleSkillGainRead(event.gained, totalXp, previousTotalXp, currentPetUuid),
             )
@@ -250,7 +250,7 @@ private class PetSkillGainTracker {
         val skillDelta = appliedDelta?.takeIf { it != 0.0 }?.let { it / multiplier } ?: return ChangeResult.UNCHANGED
         if (abs(skillDelta) >= 1.0) return ChangeResult.UNCHANGED
 
-        val resynced = (precise + skillDelta).coerceIn(totalXp, totalXp + PetXpEstimation.MAX_ESTIMATED_TOTAL_FRACTION)
+        val resynced = (precise + skillDelta).coerceIn(totalXp, totalXp + MAX_ESTIMATED_TOTAL_FRACTION)
         if (resynced == precise) return ChangeResult.UNCHANGED
         skillSamples[skill] = SkillProgressSample(totalXp, resynced, sample.petUuid)
         return ChangeResult.CHANGED
@@ -293,7 +293,7 @@ private class PetSkillGainTracker {
         val visible = listOfNotNull(totalXp, expectedVisible).maxOrNull()
         val precise = visible?.let { visibleTotal ->
             previous.preciseTotalAfterVisibleGain(visibleTotal, expectedVisible, event.gained)
-                ?: visibleTotal + PetXpEstimation.ESTIMATED_TOTAL_FRACTION
+                ?: visibleTotal + ESTIMATED_TOTAL_FRACTION
         }
         return NonActionbarTotals(visible, precise)
     }
@@ -305,7 +305,7 @@ private class PetSkillGainTracker {
     ): Double? {
         val previousPrecise = this?.preciseTotalXp ?: return null
         val expected = expectedVisible ?: return null
-        return if (abs(visibleTotal - expected) <= PetXpEstimation.VISIBLE_GAIN_TOLERANCE) previousPrecise + gained else null
+        return if (abs(visibleTotal - expected) <= VISIBLE_GAIN_TOLERANCE) previousPrecise + gained else null
     }
 
     private fun readActionbarSkillGain(
@@ -334,7 +334,7 @@ private class PetSkillGainTracker {
         else -> rememberSkillSampleAndReturn(
             event.skill,
             totalXp,
-            totalXp + PetXpEstimation.ESTIMATED_TOTAL_FRACTION,
+            totalXp + ESTIMATED_TOTAL_FRACTION,
             currentPetUuid,
             singleSkillGainRead(event.gained, totalXp, previousTotalXp, currentPetUuid),
         )
@@ -353,7 +353,7 @@ private class PetSkillGainTracker {
         val decomposedGain = if (useVisibleGain) null else decomposeDisplayedGain(event.skill, displayedGain)
         val totalGain = decomposedGain ?: if (useVisibleGain) event.gained else displayedGain
         val preciseTotalXp = (previousPreciseTotalXp + totalGain)
-            .coerceIn(totalXp, totalXp + PetXpEstimation.MAX_ESTIMATED_TOTAL_FRACTION)
+            .coerceIn(totalXp, totalXp + MAX_ESTIMATED_TOTAL_FRACTION)
         val reads = readIncreasingActionbarSkillGains(
             event,
             preciseTotalXp - previousPreciseTotalXp,
@@ -388,7 +388,7 @@ private class PetSkillGainTracker {
             pendingSpawnAutopetSwap = null
             return previousPetUuid
         }
-        if (pendingSpawn?.createdAt?.passedSince()?.let { it > PetXpTiming.SPAWN_AUTOPET_TTL } == true) {
+        if (pendingSpawn?.createdAt?.passedSince()?.let { it > SPAWN_AUTOPET_TTL } == true) {
             pendingSpawnAutopetSwap = null
         }
         return currentPetUuid
@@ -404,7 +404,7 @@ private class PetSkillGainTracker {
             previousPetUuid != currentPetUuid &&
             petUuid == currentPetUuid &&
             matchesPreviousPet(previousPetUuid) &&
-            createdAt.passedSince() <= PetXpTiming.SPAWN_AUTOPET_TTL
+            createdAt.passedSince() <= SPAWN_AUTOPET_TTL
 
     private fun singleSkillGainRead(
         gain: Double,
@@ -427,21 +427,21 @@ private class PetSkillGainTracker {
     private fun rememberGainQuantum(skill: SkyBlockSkill, gained: Double) {
         val quanta = recentGainQuanta.getOrPut(skill) { mutableMapOf() }
         quanta[gained] = ElapsedTimeMark.now()
-        if (quanta.size > PetXpEstimation.RECENT_GAIN_QUANTA_LIMIT) {
+        if (quanta.size > RECENT_GAIN_QUANTA_LIMIT) {
             quanta.maxByOrNull { it.value.passedSince() }?.let { quanta.remove(it.key) }
         }
     }
 
     private fun decomposeDisplayedGain(skill: SkyBlockSkill, displayedGain: Double): Double? {
         val quantaMap = recentGainQuanta[skill] ?: return null
-        quantaMap.values.removeIf { it.passedSince() > PetXpTiming.RECENT_GAIN_QUANTA_TTL }
+        quantaMap.values.removeIf { it.passedSince() > RECENT_GAIN_QUANTA_TTL }
         val quanta = quantaMap.keys.sortedDescending()
         if (quanta.isEmpty()) return null
         return findDisplayedGainCandidate(displayedGain, quanta)
     }
 
     private fun Double.isRoundedVisibleGain(visibleGain: Double): Boolean =
-        visibleGain > 0.0 && abs(this - visibleGain) <= PetXpEstimation.VISIBLE_GAIN_TOLERANCE
+        visibleGain > 0.0 && abs(this - visibleGain) <= VISIBLE_GAIN_TOLERANCE
 
     private fun SpawnAutopetContext.matchesPreviousPet(samplePreviousPetUuid: UUID?) =
         previousPetUuid == null || previousPetUuid == samplePreviousPetUuid
@@ -456,7 +456,7 @@ private fun findDisplayedGainCandidate(displayedGain: Double, quanta: List<Doubl
         minimumQuantum = minQuantum,
         candidates = candidates,
     )
-    return candidates.singleOrNull()?.div(PetXpEstimation.VISIBLE_GAIN_DECIMAL_SCALE)
+    return candidates.singleOrNull()?.div(VISIBLE_GAIN_DECIMAL_SCALE)
 }
 
 private fun initialPreviousTotal(
@@ -478,16 +478,16 @@ private fun collectGainCandidates(
     parts: Int = 0,
 ) {
     if (candidates.size > 1) return
-    if (sum > displayedGain - PetXpEstimation.VISIBLE_GAIN_ERROR_MARGIN) {
-        candidates += (sum * PetXpEstimation.VISIBLE_GAIN_DECIMAL_SCALE).roundToLong()
+    if (sum > displayedGain - VISIBLE_GAIN_ERROR_MARGIN) {
+        candidates += (sum * VISIBLE_GAIN_DECIMAL_SCALE).roundToLong()
     }
     if (
-        parts >= PetXpEstimation.GAIN_DECOMPOSITION_PART_LIMIT ||
-        sum + minimumQuantum >= displayedGain + PetXpEstimation.VISIBLE_GAIN_ERROR_MARGIN
+        parts >= GAIN_DECOMPOSITION_PART_LIMIT ||
+        sum + minimumQuantum >= displayedGain + VISIBLE_GAIN_ERROR_MARGIN
     ) return
     for (index in startIndex until quanta.size) {
         val nextSum = sum + quanta[index]
-        if (nextSum < displayedGain + PetXpEstimation.VISIBLE_GAIN_ERROR_MARGIN) {
+        if (nextSum < displayedGain + VISIBLE_GAIN_ERROR_MARGIN) {
             collectGainCandidates(
                 quanta,
                 displayedGain,
@@ -509,8 +509,8 @@ private object PetXpRules {
             ?.level
             ?.coerceIn(0, SkyBlockSkill.TAMING.maxLevel)
             ?: 0
-        val tamingMultiplier = 1.0 + tamingLevel / PetXpRates.PERCENT_DENOMINATOR
-        val dianaMultiplier = if (MayorPerkApi.petXpBuffActive) PetXpRates.DIANA_PET_XP_MULTIPLIER else 1.0
+        val tamingMultiplier = 1.0 + tamingLevel / PERCENT_DENOMINATOR
+        val dianaMultiplier = if (MayorPerkApi.petXpBuffActive) DIANA_PET_XP_MULTIPLIER else 1.0
         val beastmasterMultiplier = getBeastmasterMultiplier()
         val itemMultiplier = petData.heldItemInternalName.petItemMultiplier(skill)
         val battleExperienceMultiplier = battleExperienceMultiplier(skill)
@@ -525,7 +525,7 @@ private object PetXpRules {
         -> null
 
         else -> when {
-            petType.replace(" ", "_") in PetXpPetTypes.NON_SKILL_PREFIXES -> null
+            petType.replace(" ", "_") in NON_SKILL_PET_TYPE_PREFIXES -> null
             petType == "ALL" -> 1.0
             petType == skill.uppercaseName -> matchingSkillMultiplier(skill)
             else -> nonMatchingSkillMultiplier(skill)
@@ -537,17 +537,17 @@ private object PetXpRules {
             ?.level
             ?.coerceIn(0, SkyBlockSkill.TAMING.maxLevel)
             ?: 0
-        val dianaRate = if (MayorPerkApi.sharingIsCaringActive) PetXpRates.SHARING_IS_CARING_EXP_SHARE_RATE else 0.0
-        return tamingLevel * PetXpRates.TAMING_EXP_SHARE_RATE_PER_LEVEL + dianaRate
+        val dianaRate = if (MayorPerkApi.sharingIsCaringActive) SHARING_IS_CARING_EXP_SHARE_RATE else 0.0
+        return tamingLevel * TAMING_EXP_SHARE_RATE_PER_LEVEL + dianaRate
     }
 
     fun whyNotMoreExpShareRate(): Double =
-        AttributeShardCatalog.getActiveLevelByAbilityName(PetXpAttributes.WHY_NOT_MORE) / PetXpRates.PERCENT_DENOMINATOR
+        AttributeShardCatalog.getActiveLevelByAbilityName(WHY_NOT_MORE_ATTRIBUTE) / PERCENT_DENOMINATOR
 
     private fun matchingSkillMultiplier(skill: SkyBlockSkill): Double = when (skill) {
         SkyBlockSkill.MINING,
         SkyBlockSkill.FISHING,
-        -> PetXpRates.MATCHING_GATHERING_SKILL_MULTIPLIER
+        -> MATCHING_GATHERING_SKILL_MULTIPLIER
 
         else -> 1.0
     }
@@ -555,34 +555,34 @@ private object PetXpRules {
     private fun nonMatchingSkillMultiplier(skill: SkyBlockSkill): Double = when (skill) {
         SkyBlockSkill.MINING,
         SkyBlockSkill.FISHING,
-        -> PetXpRates.NON_MATCHING_GATHERING_SKILL_MULTIPLIER
+        -> NON_MATCHING_GATHERING_SKILL_MULTIPLIER
 
         SkyBlockSkill.ENCHANTING,
         SkyBlockSkill.ALCHEMY,
-        -> PetXpRates.NON_MATCHING_MAGIC_SKILL_MULTIPLIER
+        -> NON_MATCHING_MAGIC_SKILL_MULTIPLIER
 
-        else -> PetXpRates.NON_MATCHING_DEFAULT_SKILL_MULTIPLIER
+        else -> NON_MATCHING_DEFAULT_SKILL_MULTIPLIER
     }
 
     private fun String?.petItemMultiplier(skill: SkyBlockSkill): Double {
         val internalName = this ?: return 1.0
-        if (internalName == PetXpItemIds.ALL_SKILLS_BOOST) return PetXpRates.ALL_SKILLS_BOOST_MULTIPLIER
-        if (internalName == PetXpItemIds.ALL_SKILLS_SUPER_BOOST) return PetXpRates.ALL_SKILLS_SUPER_BOOST_MULTIPLIER
+        if (internalName == ALL_SKILLS_BOOST) return ALL_SKILLS_BOOST_MULTIPLIER
+        if (internalName == ALL_SKILLS_SUPER_BOOST) return ALL_SKILLS_SUPER_BOOST_MULTIPLIER
         val prefix = "PET_ITEM_${skill.uppercaseName}_SKILL_BOOST_"
         if (!internalName.startsWith(prefix)) return 1.0
         return when (internalName.removePrefix(prefix)) {
-            "COMMON" -> PetXpRates.COMMON_SKILL_BOOST_MULTIPLIER
-            "UNCOMMON" -> PetXpRates.UNCOMMON_SKILL_BOOST_MULTIPLIER
-            "RARE" -> PetXpRates.RARE_SKILL_BOOST_MULTIPLIER
-            "EPIC" -> PetXpRates.EPIC_SKILL_BOOST_MULTIPLIER
+            "COMMON" -> COMMON_SKILL_BOOST_MULTIPLIER
+            "UNCOMMON" -> UNCOMMON_SKILL_BOOST_MULTIPLIER
+            "RARE" -> RARE_SKILL_BOOST_MULTIPLIER
+            "EPIC" -> EPIC_SKILL_BOOST_MULTIPLIER
             else -> 1.0
         }
     }
 
     private fun battleExperienceMultiplier(skill: SkyBlockSkill): Double =
         if (skill == SkyBlockSkill.COMBAT) {
-            1.0 + AttributeShardCatalog.getActiveLevelByAbilityName(PetXpAttributes.BATTLE_EXPERIENCE) /
-                PetXpRates.PERCENT_DENOMINATOR
+            1.0 + AttributeShardCatalog.getActiveLevelByAbilityName(BATTLE_EXPERIENCE_ATTRIBUTE) /
+                PERCENT_DENOMINATOR
         } else 1.0
 
     private fun getBeastmasterMultiplier(): Double =
@@ -624,54 +624,34 @@ private data class SpawnAutopetContext(
     val createdAt: ElapsedTimeMark = ElapsedTimeMark.now(),
 )
 
-private object PetXpSources {
-    const val ACTION_BAR = "actionbar"
-}
-
-private object PetXpEstimation {
-    const val VISIBLE_GAIN_TOLERANCE = 1.0000001
-    const val ESTIMATED_TOTAL_FRACTION = 0.5
-    const val MAX_ESTIMATED_TOTAL_FRACTION = 0.999
-    const val RECENT_GAIN_QUANTA_LIMIT = 12
-    const val GAIN_DECOMPOSITION_PART_LIMIT = 12
-    const val VISIBLE_GAIN_DECIMAL_SCALE = 10.0
-    const val VISIBLE_GAIN_ERROR_MARGIN = 1.0
-}
-
-private object PetXpRates {
-    const val PERCENT_DENOMINATOR = 100.0
-    const val EXP_SHARE_ITEM_RATE = 0.15
-    const val DIANA_PET_XP_MULTIPLIER = 1.35
-    const val SHARING_IS_CARING_EXP_SHARE_RATE = 0.10
-    const val TAMING_EXP_SHARE_RATE_PER_LEVEL = 0.002
-    const val MATCHING_GATHERING_SKILL_MULTIPLIER = 1.5
-    const val NON_MATCHING_GATHERING_SKILL_MULTIPLIER = 0.5
-    const val NON_MATCHING_MAGIC_SKILL_MULTIPLIER = 1.0 / 12.0
-    const val NON_MATCHING_DEFAULT_SKILL_MULTIPLIER = 1.0 / 3.0
-    const val ALL_SKILLS_BOOST_MULTIPLIER = 1.1
-    const val ALL_SKILLS_SUPER_BOOST_MULTIPLIER = 1.2
-    const val COMMON_SKILL_BOOST_MULTIPLIER = 1.2
-    const val UNCOMMON_SKILL_BOOST_MULTIPLIER = 1.3
-    const val RARE_SKILL_BOOST_MULTIPLIER = 1.4
-    const val EPIC_SKILL_BOOST_MULTIPLIER = 1.5
-}
-
-private object PetXpTiming {
-    val RECENT_GAIN_QUANTA_TTL = 10.minutes
-    val SPAWN_AUTOPET_TTL = 5.seconds
-}
-
-private object PetXpPetTypes {
-    val NON_SKILL_PREFIXES = setOf("GABAGOOL", "FRACTURED_SOUL")
-}
-
-private object PetXpItemIds {
-    const val EXP_SHARE = "PET_ITEM_EXP_SHARE"
-    const val ALL_SKILLS_BOOST = "PET_ITEM_ALL_SKILLS_BOOST_COMMON"
-    const val ALL_SKILLS_SUPER_BOOST = "ALL_SKILLS_SUPER_BOOST"
-}
-
-private object PetXpAttributes {
-    const val BATTLE_EXPERIENCE = "Battle Experience"
-    const val WHY_NOT_MORE = "Why Not More"
-}
+private const val ACTION_BAR_EXP_SOURCE = "actionbar"
+private const val VISIBLE_GAIN_TOLERANCE = 1.0000001
+private const val ESTIMATED_TOTAL_FRACTION = 0.5
+private const val MAX_ESTIMATED_TOTAL_FRACTION = 0.999
+private const val RECENT_GAIN_QUANTA_LIMIT = 12
+private const val GAIN_DECOMPOSITION_PART_LIMIT = 12
+private const val VISIBLE_GAIN_DECIMAL_SCALE = 10.0
+private const val VISIBLE_GAIN_ERROR_MARGIN = 1.0
+private const val PERCENT_DENOMINATOR = 100.0
+private const val EXP_SHARE_ITEM_RATE = 0.15
+private const val DIANA_PET_XP_MULTIPLIER = 1.35
+private const val SHARING_IS_CARING_EXP_SHARE_RATE = 0.10
+private const val TAMING_EXP_SHARE_RATE_PER_LEVEL = 0.002
+private const val MATCHING_GATHERING_SKILL_MULTIPLIER = 1.5
+private const val NON_MATCHING_GATHERING_SKILL_MULTIPLIER = 0.5
+private const val NON_MATCHING_MAGIC_SKILL_MULTIPLIER = 1.0 / 12.0
+private const val NON_MATCHING_DEFAULT_SKILL_MULTIPLIER = 1.0 / 3.0
+private const val ALL_SKILLS_BOOST_MULTIPLIER = 1.1
+private const val ALL_SKILLS_SUPER_BOOST_MULTIPLIER = 1.2
+private const val COMMON_SKILL_BOOST_MULTIPLIER = 1.2
+private const val UNCOMMON_SKILL_BOOST_MULTIPLIER = 1.3
+private const val RARE_SKILL_BOOST_MULTIPLIER = 1.4
+private const val EPIC_SKILL_BOOST_MULTIPLIER = 1.5
+private val RECENT_GAIN_QUANTA_TTL = 10.minutes
+private val SPAWN_AUTOPET_TTL = 5.seconds
+private val NON_SKILL_PET_TYPE_PREFIXES = setOf("GABAGOOL", "FRACTURED_SOUL")
+private const val EXP_SHARE = "PET_ITEM_EXP_SHARE"
+private const val ALL_SKILLS_BOOST = "PET_ITEM_ALL_SKILLS_BOOST_COMMON"
+private const val ALL_SKILLS_SUPER_BOOST = "ALL_SKILLS_SUPER_BOOST"
+private const val BATTLE_EXPERIENCE_ATTRIBUTE = "Battle Experience"
+private const val WHY_NOT_MORE_ATTRIBUTE = "Why Not More"

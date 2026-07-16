@@ -47,19 +47,6 @@ object PetOverlayConfigScreen {
             }
         }
 
-    fun isOpen(): Boolean {
-        val currentEditor = editor ?: return false
-        val screen = MinecraftClient.screen() as? MoulConfigScreenComponent ?: return false
-        val root = screen.guiContext.root as? GuiElementComponent ?: return false
-        return root.element === currentEditor
-    }
-
-    fun invalidate() {
-        editor = null
-        previewPosition = null
-        resetPreviewInteraction()
-    }
-
     private fun editor(): MoulConfigEditor<PetOverlayConfig> {
         editor?.let { return it }
         return SkysoftMoulConfigGuis.createEditor(config).also { editor = it }

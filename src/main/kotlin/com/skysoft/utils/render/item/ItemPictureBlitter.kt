@@ -22,7 +22,7 @@ internal object ItemPictureBlitter {
         picture: RotatingItemPicture,
         gui: GuiRenderState,
     ) {
-        val texture = (renderer as PictureInPictureRendererAccessor).skysoft_getTextureView()
+        val texture = (renderer as PictureInPictureRendererAccessor).skysoftGetTextureView()
         val sampler = RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)
         gui.addBlitToCurrentLayer(
             BlitRenderState(

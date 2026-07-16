@@ -83,18 +83,10 @@ internal object BetterShurikenSoundCorrelation {
         return level.entitiesForRendering()
             .filterIsInstance<LivingEntity>()
             .filter { entity -> entity.isAlive && entity !is ArmorStand && entity !is Player }
-            .map { entity -> entity to distanceToBoundsSquared(location, entity) }
+            .map { entity -> entity to entity.boundingBox.distanceToSqr(location) }
             .minByOrNull { (_, distance) -> distance }
             ?.takeIf { (_, distance) -> distance <= MAX_SOUND_TARGET_DISTANCE_SQUARED }
             ?.first
-    }
-
-    private fun distanceToBoundsSquared(location: Vec3, entity: LivingEntity): Double {
-        val bounds = entity.boundingBox
-        val dx = maxOf(bounds.minX - location.x, 0.0, location.x - bounds.maxX)
-        val dy = maxOf(bounds.minY - location.y, 0.0, location.y - bounds.maxY)
-        val dz = maxOf(bounds.minZ - location.z, 0.0, location.z - bounds.maxZ)
-        return dx * dx + dy * dy + dz * dz
     }
 
     private val ClientSoundEvent.isShurikenConfirmation: Boolean

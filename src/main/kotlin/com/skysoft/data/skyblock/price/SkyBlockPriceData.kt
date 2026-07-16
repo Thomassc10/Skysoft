@@ -13,8 +13,6 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.Collections
-import java.util.EnumSet
 
 object SkyBlockPriceData {
     private const val BAZAAR_URL = "https://api.findthesoft.com/bazaar"
@@ -36,7 +34,7 @@ object SkyBlockPriceData {
     var bazaarStatus = BazaarDataStatus(BazaarDataLoadState.NOT_LOADED)
         private set
 
-    private val bazaarInterests = Collections.synchronizedSet(EnumSet.noneOf(BazaarDataConsumer::class.java))
+    private val hasItemListBazaarInterest = AtomicBoolean(false)
 
     @Volatile
     private var lowestBins: Map<String, Long> = emptyMap()
@@ -87,8 +85,8 @@ object SkyBlockPriceData {
         itemId,
     )
 
-    fun setBazaarDataInterest(consumer: BazaarDataConsumer, isActive: Boolean) {
-        if (isActive) bazaarInterests += consumer else bazaarInterests -= consumer
+    fun setItemListBazaarInterest(isActive: Boolean) {
+        hasItemListBazaarInterest.set(isActive)
     }
 
     fun getLowestBin(itemId: String): Long? = lowestBins[itemId]
@@ -183,7 +181,7 @@ object SkyBlockPriceData {
         val inventoryConfig = SkysoftConfigGui.config().inventory
         return shouldRefreshBazaarData(
             isInSkyBlock = HypixelLocationState.inSkyBlock,
-            hasConsumerInterest = bazaarInterests.isNotEmpty(),
+            hasItemListInterest = hasItemListBazaarInterest.get(),
             arePriceTooltipsEnabled = inventoryConfig.priceTooltips.enabled,
             isRareLootSharingEnabled = isRareLootSharingEnabled(),
             isBazaarTrackerEnabled = inventoryConfig.bazaar.enabled,
@@ -204,10 +202,6 @@ object SkyBlockPriceData {
     }
 
     private const val BAZAAR_DEPTH_PRODUCT_LIMIT = 50
-}
-
-enum class BazaarDataConsumer {
-    ITEM_LIST,
 }
 
 enum class BazaarDataLoadState {
@@ -247,13 +241,13 @@ internal fun bazaarProductAvailability(
 
 internal fun shouldRefreshBazaarData(
     isInSkyBlock: Boolean,
-    hasConsumerInterest: Boolean,
+    hasItemListInterest: Boolean,
     arePriceTooltipsEnabled: Boolean,
     isRareLootSharingEnabled: Boolean,
     isBazaarTrackerEnabled: Boolean,
     hasActiveOrders: Boolean,
 ): Boolean = isInSkyBlock && (
-    hasConsumerInterest ||
+    hasItemListInterest ||
         arePriceTooltipsEnabled ||
         isRareLootSharingEnabled ||
         isBazaarTrackerEnabled && hasActiveOrders

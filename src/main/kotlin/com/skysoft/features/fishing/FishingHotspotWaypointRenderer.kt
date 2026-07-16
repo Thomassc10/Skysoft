@@ -1,6 +1,6 @@
 package com.skysoft.features.fishing
 
-import com.skysoft.config.FishingHotspotLabelFormat
+import com.skysoft.config.WaypointLabelFormat
 import com.skysoft.utils.WorldVec
 import com.skysoft.utils.chat.ChatMessageSender
 import com.skysoft.utils.toWorldVec
@@ -8,7 +8,6 @@ import com.skysoft.utils.render.BlockHighlightRenderer
 import com.skysoft.utils.render.SkysoftRenderContext
 import com.skysoft.utils.render.WorldLabelRenderer
 import com.skysoft.utils.render.WorldLabelStyle
-import com.skysoft.utils.render.WorldLineRenderer
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import java.awt.Color
@@ -34,7 +33,7 @@ internal fun shouldRemoveFishingHotspotWaypoint(
 }
 
 internal fun fishingHotspotLabel(
-    labelFormat: FishingHotspotLabelFormat,
+    labelFormat: WaypointLabelFormat,
     isBold: Boolean,
 ): Component = if (isBold) {
     Component.literal(labelFormat.format("Hotspot"))
@@ -49,7 +48,7 @@ internal object FishingHotspotWaypointRenderer {
         waypoints: Collection<FishingHotspotWaypoint>,
         drawCrosshairLine: Boolean,
         boldLabel: Boolean,
-        labelFormat: FishingHotspotLabelFormat,
+        labelFormat: WaypointLabelFormat,
     ) {
         waypoints
             .sortedByDescending { distanceSq(context, it.share.location) }
@@ -64,7 +63,7 @@ internal object FishingHotspotWaypointRenderer {
                 )
                 drawWaypointText(context, waypoint, boldLabel, labelFormat)
                 if (drawCrosshairLine) {
-                    WorldLineRenderer.drawToCrosshair(context, blockCenter, WAYPOINT_COLOR)
+                    context.drawLineToCrosshair(blockCenter, WAYPOINT_COLOR)
                 }
             }
     }
@@ -73,7 +72,7 @@ internal object FishingHotspotWaypointRenderer {
         context: SkysoftRenderContext,
         waypoint: FishingHotspotWaypoint,
         boldLabel: Boolean,
-        labelFormat: FishingHotspotLabelFormat,
+        labelFormat: WaypointLabelFormat,
     ) {
         WorldLabelRenderer.draw(
             context,
@@ -85,7 +84,7 @@ internal object FishingHotspotWaypointRenderer {
 
     private fun FishingHotspotWaypoint.labelLines(
         boldLabel: Boolean,
-        labelFormat: FishingHotspotLabelFormat,
+        labelFormat: WaypointLabelFormat,
     ): List<Component> =
         listOf(
             fishingHotspotLabel(labelFormat, boldLabel),

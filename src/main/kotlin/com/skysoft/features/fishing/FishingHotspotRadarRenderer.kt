@@ -5,7 +5,6 @@ import com.skysoft.utils.render.BlockHighlightRenderer
 import com.skysoft.utils.render.SkysoftRenderContext
 import com.skysoft.utils.render.WorldLabelRenderer
 import com.skysoft.utils.render.WorldLabelStyle
-import com.skysoft.utils.render.WorldLineRenderer
 import com.skysoft.utils.toWorldVec
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
@@ -32,7 +31,7 @@ internal object FishingHotspotRadarRenderer {
             LABEL_STYLE,
         )
         if (drawCrosshairLine) {
-            WorldLineRenderer.drawToCrosshair(context, blockCenter, GUESS_OUTLINE_COLOR, GUESS_LINE_WIDTH)
+            context.drawLineToCrosshair(blockCenter, GUESS_OUTLINE_COLOR, GUESS_LINE_WIDTH)
         }
     }
 

@@ -49,11 +49,11 @@ internal fun rememberResolvedOrder(order: ProfileStorage.BazaarOrderData) {
             timestampMillis = System.currentTimeMillis(),
         ),
     )
-    while (recentResolvedOrders.size > BazaarTrackerHistorySettings.MAX_RECENT_RESOLVED_ORDERS) recentResolvedOrders.removeFirst()
+    while (recentResolvedOrders.size > MAX_RECENT_RESOLVED_ORDERS) recentResolvedOrders.removeFirst()
 }
 
 internal fun pruneRecentResolvedOrders() {
-    val cutoff = System.currentTimeMillis() - BazaarTrackerHistorySettings.RECENT_RESOLVED_SUPPRESS_MILLIS
+    val cutoff = System.currentTimeMillis() - RECENT_RESOLVED_SUPPRESS_MILLIS
     while (recentResolvedOrders.firstOrNull()?.timestampMillis?.let { it < cutoff } == true) recentResolvedOrders.removeFirst()
 }
 

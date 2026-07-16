@@ -13,7 +13,6 @@ import com.skysoft.data.skyblock.SkyBlockProgressionRequirement
 import com.skysoft.data.skyblock.SkyBlockRecipe
 import com.skysoft.data.skyblock.SkyBlockRecipeType
 import com.skysoft.data.skyblock.recipeIngredientStack
-import com.skysoft.data.skyblock.price.BazaarDataConsumer
 import com.skysoft.data.skyblock.price.SkyBlockPriceData
 import com.skysoft.gui.tooltip.SkysoftNativeTooltip
 import com.skysoft.utils.BrowserUtilities
@@ -37,7 +36,7 @@ import org.lwjgl.glfw.GLFW
 internal class ItemListViewerScreen(
     private val parent: Screen?,
     initialKey: ItemListEntryKey,
-) : BazaarAwareScreen(Component.literal("Skysoft Item List")) {
+) : Screen(Component.literal("Skysoft Item List")) {
     private val selection = ViewerSelection(initialKey)
     private var currentKey by selection::currentKey
     private var mode by selection::mode
@@ -57,6 +56,17 @@ internal class ItemListViewerScreen(
     private var petBounds: List<PetIngredientBounds> = emptyList()
     private var fusionIngredientTriggers: List<FusionIngredientTrigger> = emptyList()
     private val petLevels = mutableMapOf<RecipePetLevelKey, Int>()
+
+    override fun init() {
+        super.init()
+        SkyBlockPriceData.setItemListBazaarInterest(true)
+        SkyBlockPriceData.refreshBazaarNow()
+    }
+
+    override fun removed() {
+        SkyBlockPriceData.setItemListBazaarInterest(false)
+        super.removed()
+    }
 
     override fun extractRenderState(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         selection.ensureAvailableMode()
@@ -153,7 +163,12 @@ internal class ItemListViewerScreen(
             ViewerInputResult.HANDLED
         }
         layout.back.contains(mouseX, mouseY) -> navigateBack()
-        layout.forward.contains(mouseX, mouseY) -> navigateForward()
+        layout.forward.contains(mouseX, mouseY) -> {
+            val location = forwardStack.removeLastOrNull() ?: return ViewerInputResult.IGNORED
+            backStack += selection.location()
+            selection.restore(location)
+            ViewerInputResult.HANDLED
+        }
         layout.favorite.contains(mouseX, mouseY) -> {
             ItemListState.toggleFavorite(currentKey)
             ViewerInputResult.HANDLED
@@ -171,7 +186,11 @@ internal class ItemListViewerScreen(
             openWiki(currentKey, official = true)
         layout.wikiLinks(minionFamily(currentKey) != null).second.contains(mouseX, mouseY) ->
             openWiki(currentKey, official = false)
-        else -> selectCategory(layout, mouseX, mouseY).orElse {
+        else -> run {
+            val categories = selection.currentCategories().take(MAX_CATEGORY_BUTTONS)
+            categories.withIndex().firstOrNull { (index, _) -> layout.category(index).contains(mouseX, mouseY) }
+                ?.value?.let(selection::selectCategory) ?: ViewerInputResult.IGNORED
+        }.orElse {
             if (mode == ItemListViewMode.RECIPES && selectedSupplemental == ViewerSupplementalCategory.BAZAAR) {
                 val click = bazaarPanel.click(layout.recipeGrid.bounds, currentKey, mouseX, mouseY)
                 if (click.isHandled) ViewerInputResult.HANDLED else ViewerInputResult.IGNORED
@@ -507,19 +526,6 @@ internal class ItemListViewerScreen(
         return key
     }
 
-    private fun selectCategory(layout: ViewerLayout, mouseX: Int, mouseY: Int): ViewerInputResult {
-        val categories = selection.currentCategories().take(MAX_CATEGORY_BUTTONS)
-        val category = categories.firstOrNull { layout.category(categories.indexOf(it)).contains(mouseX, mouseY) }
-            ?: return ViewerInputResult.IGNORED
-        return selection.selectCategory(category)
-    }
-
-    private fun navigateIngredient(mouseX: Int, mouseY: Int): ViewerInputResult {
-        val key = ingredientBounds.firstOrNull { it.first.contains(mouseX, mouseY) }?.second
-            ?: return ViewerInputResult.IGNORED
-        return navigateTo(key)
-    }
-
     private fun navigateTo(key: ItemListEntryKey): ViewerInputResult {
         if (key == currentKey && mode == ItemListViewMode.INFO) return ViewerInputResult.IGNORED
         backStack += selection.location()
@@ -529,16 +535,15 @@ internal class ItemListViewerScreen(
         return ViewerInputResult.HANDLED
     }
 
+    private fun navigateIngredient(mouseX: Int, mouseY: Int): ViewerInputResult {
+        val key = ingredientBounds.firstOrNull { it.first.contains(mouseX, mouseY) }?.second
+            ?: return ViewerInputResult.IGNORED
+        return navigateTo(key)
+    }
+
     private fun navigateBack(): ViewerInputResult {
         val location = backStack.removeLastOrNull() ?: return ViewerInputResult.IGNORED
         forwardStack += selection.location()
-        selection.restore(location)
-        return ViewerInputResult.HANDLED
-    }
-
-    private fun navigateForward(): ViewerInputResult {
-        val location = forwardStack.removeLastOrNull() ?: return ViewerInputResult.IGNORED
-        backStack += selection.location()
         selection.restore(location)
         return ViewerInputResult.HANDLED
     }
@@ -550,19 +555,6 @@ internal class ItemListViewerScreen(
         val SCREEN_OVERLAY = 0xB0000000.toInt()
         val SLOT_BORDER = 0xFF111315.toInt()
         val SLOT_FILL = 0xD0202428.toInt()
-    }
-}
-
-internal abstract class BazaarAwareScreen(title: Component) : Screen(title) {
-    override fun init() {
-        super.init()
-        SkyBlockPriceData.setBazaarDataInterest(BazaarDataConsumer.ITEM_LIST, true)
-        SkyBlockPriceData.refreshBazaarNow()
-    }
-
-    override fun removed() {
-        SkyBlockPriceData.setBazaarDataInterest(BazaarDataConsumer.ITEM_LIST, false)
-        super.removed()
     }
 }
 

@@ -7,8 +7,6 @@ import kotlin.math.max
 internal data class BazaarOrderRowMatch(
     val order: ProfileStorage.BazaarOrderData,
     val parsed: PendingOrder,
-    val cost: Long,
-    val candidateCount: Int,
 )
 
 internal data class BazaarSnapshotReconciliation(
@@ -57,8 +55,6 @@ internal fun reconcileBazaarSnapshot(
                 BazaarOrderRowMatch(
                     order = orders[orderIndex],
                     parsed = rows[rowIndex],
-                    cost = cost,
-                    candidateCount = orders.indices.count { matchCosts[it][rowIndex] < UNMATCHED_ASSIGNMENT_COST },
                 ),
             )
         }
@@ -89,7 +85,7 @@ internal fun bazaarIdentityCost(order: ProfileStorage.BazaarOrderData, parsed: P
             order.amountResolution,
             parsed.amount.toDouble(),
             parsed.amountResolution,
-            BazaarTrackerTolerances.EXACT_AMOUNT_EPSILON,
+            EXACT_AMOUNT_EPSILON,
         )
     ) {
         return IMPOSSIBLE_ASSIGNMENT_COST
@@ -181,7 +177,7 @@ private fun shouldUpdateUnconfirmedTotal(order: ProfileStorage.BazaarOrderData, 
     return !order.setupConfirmed &&
         total > 0.0 &&
         (
-            abs(order.totalCoins - total) > BazaarTrackerTolerances.TOTAL_RECALCULATION_EPSILON ||
+            abs(order.totalCoins - total) > TOTAL_RECALCULATION_EPSILON ||
                 order.totalCoinsResolution != parsed.totalCoinsResolution
             )
 }

@@ -129,10 +129,10 @@ object InventoryButtonManager {
         val accessor = screen as AbstractContainerScreenAccessor
         val reserved = ItemListController.reservedBounds(screen)
         return placements(
-            left = accessor.`skysoft$getLeftPos`(),
-            top = accessor.`skysoft$getTopPos`(),
-            imageWidth = accessor.`skysoft$getImageWidth`(),
-            imageHeight = accessor.`skysoft$getImageHeight`(),
+            left = accessor.skysoftGetLeftPos(),
+            top = accessor.skysoftGetTopPos(),
+            imageWidth = accessor.skysoftGetImageWidth(),
+            imageHeight = accessor.skysoftGetImageHeight(),
             playerInventory = screen is InventoryScreen,
             includeInactive = includeInactive,
         ).filterNot { placement -> reserved?.intersects(placement.bounds) == true }
@@ -160,10 +160,10 @@ object InventoryButtonManager {
     fun moveButton(screen: AbstractContainerScreen<*>, index: Int, screenX: Int, screenY: Int) {
         val button = config.buttons.getOrNull(index) ?: return
         val accessor = screen as AbstractContainerScreenAccessor
-        val left = accessor.`skysoft$getLeftPos`()
-        val top = accessor.`skysoft$getTopPos`()
-        val imageWidth = accessor.`skysoft$getImageWidth`()
-        val imageHeight = accessor.`skysoft$getImageHeight`()
+        val left = accessor.skysoftGetLeftPos()
+        val top = accessor.skysoftGetTopPos()
+        val imageWidth = accessor.skysoftGetImageWidth()
+        val imageHeight = accessor.skysoftGetImageHeight()
         val playerInventory = screen is InventoryScreen
         InventoryButtonCanvas(Rect(left, top, imageWidth, imageHeight), playerInventory)
             .move(button, screenX, screenY)

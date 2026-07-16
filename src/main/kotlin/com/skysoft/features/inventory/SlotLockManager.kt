@@ -54,7 +54,8 @@ object SlotLockManager {
         if (activeLockKey == event.key()) return InputHandlingResult.CONSUMED
         activeLockKey = event.key()
 
-        val slot = (screen as AbstractContainerScreenAccessor).`skysoft$getHoveredSlot`()
+        val slot = (screen as AbstractContainerScreenAccessor).skysoftGetHoveredSlot()
+            ?: return InputHandlingResult.CONSUMED
         if (!isLockablePlayerSlot(slot)) return InputHandlingResult.CONSUMED
         if (SlotBindingManager.canHandleBindingKey(event.key())) {
             pendingLockSlot = slot.containerSlot

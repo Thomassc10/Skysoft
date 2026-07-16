@@ -9,7 +9,6 @@ import com.skysoft.utils.render.SkysoftRenderContext
 import com.skysoft.utils.render.WorldCircleRenderer
 import com.skysoft.utils.render.WorldLabelRenderer
 import com.skysoft.utils.render.WorldLabelStyle
-import com.skysoft.utils.render.WorldLineRenderer
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
@@ -27,7 +26,7 @@ internal object DianaRareMobRenderer {
     ) {
         targets.forEach { target -> renderTarget(context, target, drawLootshareRadius, localPlayerName, lootshareColors) }
         if (currentTarget != null && drawCrosshairLine) {
-            WorldLineRenderer.drawToCrosshair(context, currentTarget.lineLocation(), RARE_MOB_COLOR, RARE_MOB_LINE_WIDTH)
+            context.drawLineToCrosshair(currentTarget.lineLocation(), RARE_MOB_COLOR, RARE_MOB_LINE_WIDTH)
         }
     }
 

@@ -1,7 +1,9 @@
 package com.skysoft.features.inventory
 
+import com.skysoft.config.DEFAULT_SMOOTH_SWAPPING_DURATION
+import com.skysoft.config.MAX_SMOOTH_SWAPPING_SPEED
+import com.skysoft.config.MIN_SMOOTH_SWAPPING_SPEED
 import com.skysoft.config.SkysoftConfigGui
-import com.skysoft.config.SmoothSwappingLimits
 import com.skysoft.config.SmoothSwappingCurve
 import com.skysoft.mixin.AbstractContainerScreenAccessor
 import com.skysoft.utils.EasingUtilities
@@ -100,8 +102,8 @@ object SmoothSwapping {
 
     private fun snapshotSlots(screen: AbstractContainerScreen<*>): Map<Int, SlotSnapshot> {
         val accessor = screen as AbstractContainerScreenAccessor
-        val left = accessor.`skysoft$getLeftPos`()
-        val top = accessor.`skysoft$getTopPos`()
+        val left = accessor.skysoftGetLeftPos()
+        val top = accessor.skysoftGetTopPos()
         return screen.menu.slots.asSequence()
             .filter { it.isActive }
             .map { slot ->
@@ -234,10 +236,10 @@ object SmoothSwapping {
 
     private fun animationDurationMillis(): Int {
         val speed = config.settings.animationSpeed.coerceIn(
-            SmoothSwappingLimits.MIN_SPEED,
-            SmoothSwappingLimits.MAX_SPEED,
+            MIN_SMOOTH_SWAPPING_SPEED,
+            MAX_SMOOTH_SWAPPING_SPEED,
         )
-        return (SmoothSwappingLimits.DEFAULT_DURATION * SPEED_PERCENT_SCALE / speed)
+        return (DEFAULT_SMOOTH_SWAPPING_DURATION * SPEED_PERCENT_SCALE / speed)
             .roundToInt()
             .coerceIn(MIN_DURATION_MS, MAX_DURATION_MS)
     }

@@ -49,14 +49,12 @@ Credit to David Cole and Luna for the SkyHanni rendering implementations, with r
 - Sources: `at/hannibal2/skyhanni/utils/render/SkyHanniVertexFormats.kt`, `at/hannibal2/skyhanni/utils/render/ShaderRenderUtils.kt`, `at/hannibal2/skyhanni/utils/render/SkyHanniRenderPipeline.kt`, `at/hannibal2/skyhanni/utils/render/states/SkyHanniCircleRenderState.kt`, `at/hannibal2/skyhanni/utils/render/states/AbstractSkyHanniRoundedShapeRenderState.kt`, `at/hannibal2/skyhanni/utils/render/item/SkyHanniRealtimeItemSlot.kt`, `assets/skyhanni/shaders/circle_deferred.vsh`, `assets/skyhanni/shaders/circle_deferred.fsh`
 - Commits: `8fd6aee69` (`Backend: Deferred Rendering Pipelines`), `fdfb2423b` (`Backend + Improvement: Custom Modern Item Rendering`), `36814fc1d` (`Feature: Add 26.1 support`)
 - Skysoft files:
-  - `src/main/java/com/skysoft/mixin/PictureInPictureRendererAccessor.java`
-  - `src/main/java/com/skysoft/mixin/RenderPipelinesAccessor.java`
+  - `src/main/kotlin/com/skysoft/mixin/PictureInPictureRendererAccessor.kt`
   - `src/main/kotlin/com/skysoft/utils/render/item/ItemPictureBlitter.kt`
   - `src/main/kotlin/com/skysoft/utils/render/item/RotatingItemPicture.kt`
   - `src/main/kotlin/com/skysoft/utils/render/shader/RoundedRectShaderParams.kt`
   - `src/main/kotlin/com/skysoft/utils/render/shader/SkysoftCircleRenderState.kt`
   - `src/main/kotlin/com/skysoft/utils/render/shader/SkysoftCircleShaderRenderer.kt`
-  - `src/main/kotlin/com/skysoft/utils/render/shader/SkysoftShaderPipeline.kt`
   - `src/main/resources/assets/skysoft/shaders/circle_deferred.fsh`
   - `src/main/resources/assets/skysoft/shaders/circle_deferred.vsh`
   - `src/target26_1/kotlin/com/skysoft/utils/render/SkysoftPipelineBuilder.kt`
@@ -78,6 +76,6 @@ Credit to Bloxigus, NopoTheGamer, MTOnline, and Luna for the SkyHanni input hook
 - Sources: `at/hannibal2/skyhanni/mixins/transformers/MixinMinecraftInputs.java`, `at/hannibal2/skyhanni/mixins/hooks/MinecraftInputHook.kt`
 - Commit: `5c1948973` (`Backend: Move click cancelling from cancelling outbound packets to cancelling handling of the clicks`)
 - Skysoft files:
-  - `src/main/java/com/skysoft/mixin/MinecraftInputMixin.java`
+  - `src/main/kotlin/com/skysoft/mixin/MinecraftInputMixin.kt`
   - `src/main/kotlin/com/skysoft/utils/input/InputEventInterceptor.kt`
 - License: GNU Lesser General Public License v2.1 only

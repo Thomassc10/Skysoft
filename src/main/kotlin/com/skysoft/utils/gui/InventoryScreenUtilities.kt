@@ -34,8 +34,8 @@ internal fun defaultStackSignature(stack: ItemStack): String =
 
 internal fun AbstractContainerScreen<*>.nonPlayerSlotAt(mouseX: Int, mouseY: Int, includeEmpty: Boolean = false): Slot? {
     val accessor = this as AbstractContainerScreenAccessor
-    val left = accessor.`skysoft$getLeftPos`()
-    val top = accessor.`skysoft$getTopPos`()
+    val left = accessor.skysoftGetLeftPos()
+    val top = accessor.skysoftGetTopPos()
     return nonPlayerSlots().firstOrNull { slot ->
         (includeEmpty || !slot.item.isEmpty) &&
             mouseX in left + slot.x until left + slot.x + VANILLA_SLOT_SIZE &&

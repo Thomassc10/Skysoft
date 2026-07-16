@@ -42,7 +42,6 @@ data class LowestBinsResponse(
 data class SkysoftBazaarDepthResponse(
     val success: Boolean = false,
     val cause: String? = null,
-    val lastUpdated: Long? = null,
     val fetchedAt: Long = 0,
     val products: Map<String, SkysoftBazaarDepthProduct> = emptyMap(),
 )
@@ -50,8 +49,6 @@ data class SkysoftBazaarDepthResponse(
 data class SkysoftBazaarDepthProduct(
     val buySummary: List<SkysoftBazaarDepthRow> = emptyList(),
     val sellSummary: List<SkysoftBazaarDepthRow> = emptyList(),
-    val buyMovingWeek: Double = 0.0,
-    val sellMovingWeek: Double = 0.0,
     val flowDeltas: List<SkysoftBazaarFlowDelta> = emptyList(),
     val priceHistory: List<SkysoftBazaarPriceSnapshot> = emptyList(),
 )

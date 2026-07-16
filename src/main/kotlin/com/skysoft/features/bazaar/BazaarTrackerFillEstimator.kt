@@ -23,9 +23,7 @@ internal data class BazaarFillEstimateState(
     val baselineAmountAtPrice: Long,
     val queueAheadAtPrice: Long,
     val queueAhead: Long,
-    val eligibleFlow: Long,
     val estimatedFilled: Long,
-    val lastSeenAmountAtPrice: Long,
     val updatedAtMillis: Long,
 )
 
@@ -124,9 +122,7 @@ internal fun updateFillEstimate(
 
     fillEstimateStates[order.id] = state.copy(
         queueAhead = queue.queueAhead,
-        eligibleFlow = eligibleFlow,
         estimatedFilled = estimatedFilled,
-        lastSeenAmountAtPrice = queue.amountAtPrice,
         updatedAtMillis = System.currentTimeMillis(),
     )
 }
@@ -157,9 +153,7 @@ private fun initialFillEstimateState(
         baselineAmountAtPrice = queue.amountAtPrice,
         queueAheadAtPrice = (queue.amountAtPrice - remaining).coerceAtLeast(0L),
         queueAhead = queue.queueAhead,
-        eligibleFlow = eligibleFlow,
         estimatedFilled = baselineFilled,
-        lastSeenAmountAtPrice = queue.amountAtPrice,
         updatedAtMillis = System.currentTimeMillis(),
     )
 }

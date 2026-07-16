@@ -16,7 +16,12 @@ class SkysoftRenderContext(
     val camera: Camera,
     val cameraRenderState: CameraRenderState,
 ) {
-    fun drawLineToCrosshair(location: WorldVec, color: Color, lineWidth: Int, depth: Boolean) {
+    fun drawLineToCrosshair(
+        location: WorldVec,
+        color: Color,
+        lineWidth: Int = DEFAULT_LINE_WIDTH,
+        depth: Boolean = false,
+    ) {
         draw3DLine(exactPlayerCrosshairLocation(), location, color, lineWidth, depth)
     }
 
@@ -32,4 +37,5 @@ class SkysoftRenderContext(
     }
 }
 
+private const val DEFAULT_LINE_WIDTH = 3
 private const val CROSSHAIR_PICK_DISTANCE = 2.0

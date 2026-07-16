@@ -3,8 +3,6 @@ package com.skysoft.features.bazaar
 import com.skysoft.data.skyblock.price.SkyBlockPriceData
 
 object BazaarOrderBookApi {
-    fun register() = Unit
-
     fun get(productId: String?): BazaarMarket? {
         if (productId == null) return null
         val product = SkyBlockPriceData.getBazaarProduct(productId) ?: return null

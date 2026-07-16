@@ -160,6 +160,3 @@ potential-bugs:
 skysoft:
     AmbiguousBooleanReturn:
         active: true
-    LargeUngroupedConstantSet:
-        active: true
-        threshold: 15

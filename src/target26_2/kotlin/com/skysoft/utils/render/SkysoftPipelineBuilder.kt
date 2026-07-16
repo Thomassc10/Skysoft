@@ -8,15 +8,29 @@ import com.mojang.blaze3d.pipeline.BlendFunction
 import com.mojang.blaze3d.pipeline.ColorTargetState
 import com.mojang.blaze3d.pipeline.DepthStencilState
 import com.mojang.blaze3d.pipeline.RenderPipeline
+import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.VertexFormat
-import com.skysoft.mixin.RenderPipelinesAccessor
+import net.minecraft.client.renderer.BindGroupLayouts
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
 import java.util.Optional
 
 object SkysoftPipelineBuilder {
+    private val itemPipelineSnippet = RenderPipeline.builder()
+        .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.FOG)
+        .withBindGroupLayout(BindGroupLayouts.LIGHTING)
+        .withVertexShader("core/item")
+        .withFragmentShader("core/item")
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1_SAMPLER2)
+        .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+        .withPrimitiveTopology(PrimitiveTopology.QUADS)
+        .withDepthStencilState(DepthStencilState.DEFAULT)
+        .buildSnippet()
+
     fun guiSnippet(): RenderPipeline.Snippet = RenderPipelines.GUI_SNIPPET
-    fun itemSnippet(): RenderPipeline.Snippet = RenderPipelinesAccessor.`skysoft$getItemSnippet`()
+    fun itemSnippet(): RenderPipeline.Snippet = itemPipelineSnippet
 
     fun build(
         location: Identifier,

@@ -39,7 +39,7 @@ object SkysoftVertexFormats {
         w: Float,
         format: VertexElement,
     ) {
-        val ptr = (this@writeParams as VertexMemoryAccess).`skysoft$attributeAddress`(
+        val ptr = (this@writeParams as VertexMemoryAccess).skysoftAttributeAddress(
             format.element,
             format.offset,
         )

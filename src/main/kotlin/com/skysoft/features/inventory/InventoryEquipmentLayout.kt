@@ -97,7 +97,7 @@ internal fun inventoryEquipmentSlotGeometry(left: Int, top: Int): List<Inventory
 
 internal fun inventoryEquipmentSlotGeometry(screen: AbstractContainerScreen<*>): List<InventoryEquipmentSlotGeometry> {
     val accessor = screen as AbstractContainerScreenAccessor
-    return inventoryEquipmentSlotGeometry(accessor.`skysoft$getLeftPos`(), accessor.`skysoft$getTopPos`())
+    return inventoryEquipmentSlotGeometry(accessor.skysoftGetLeftPos(), accessor.skysoftGetTopPos())
 }
 
 internal data class InventoryEquipmentSlotGeometry(

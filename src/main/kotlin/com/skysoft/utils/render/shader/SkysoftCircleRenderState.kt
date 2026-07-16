@@ -3,12 +3,17 @@
 
 package com.skysoft.utils.render.shader
 
+import com.mojang.blaze3d.pipeline.BlendFunction
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.vertex.BufferBuilder
 import com.mojang.blaze3d.vertex.VertexConsumer
+import com.skysoft.SkysoftMod
+import com.skysoft.utils.render.SkysoftDrawMode
+import com.skysoft.utils.render.SkysoftPipelineBuilder
 import com.skysoft.utils.render.shader.SkysoftVertexFormats.writeParams
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
+import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState
 import kotlin.math.abs
 import kotlin.math.min
@@ -27,7 +32,7 @@ class SkysoftCircleRenderState(
 ) : GuiElementRenderState {
     private val padding = 5
 
-    override fun pipeline(): RenderPipeline = SkysoftShaderPipeline.CIRCLE_DEFERRED()
+    override fun pipeline(): RenderPipeline = CIRCLE_DEFERRED_PIPELINE
 
     override fun bounds(): ScreenRectangle {
         val left = params.poseX((x - padding).toFloat())
@@ -81,3 +86,16 @@ class SkysoftCircleRenderState(
         )
     }
 }
+
+private val CIRCLE_DEFERRED_PIPELINE = RenderPipelines.register(
+    SkysoftPipelineBuilder.build(
+        location = SkysoftMod.id("circle_deferred"),
+        snippet = SkysoftPipelineBuilder.guiSnippet(),
+        vertexFormat = SkysoftVertexFormats.POSITION_COLOR_ROUNDED,
+        drawMode = SkysoftDrawMode.QUADS,
+        blend = BlendFunction.TRANSLUCENT,
+        vertexShader = SkysoftMod.id("circle_deferred"),
+        fragmentShader = SkysoftMod.id("circle_deferred"),
+        depthWrite = false,
+    ),
+)
