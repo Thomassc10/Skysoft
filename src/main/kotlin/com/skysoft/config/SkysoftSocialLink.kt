@@ -33,8 +33,9 @@ internal class SkysoftSocialLink private constructor(
         val discord = SkysoftSocialLink("Official Discord", "https://discord.gg/akin", "discord")
         val modrinth = SkysoftSocialLink("Modrinth Page", "https://modrinth.com/mod/skysoft", "modrinth")
         val github = SkysoftSocialLink("Source Code", "https://github.com/akinsoft/Skysoft", "github")
+        val koFi = SkysoftSocialLink("sup dawg? ko-fi?", "https://ko-fi.com/akinsoft", "kofi")
 
-        val headerLinks: List<Social> = listOf(github, modrinth, discord)
+        val headerLinks: List<Social> = listOf(github, modrinth, discord, koFi)
 
         private fun icon(name: String) =
             MyResourceLocation("skysoft", "textures/gui/sprites/social/$name.png")
