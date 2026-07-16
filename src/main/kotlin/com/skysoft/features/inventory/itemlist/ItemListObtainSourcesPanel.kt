@@ -277,7 +277,8 @@ private fun otherObtainSources(key: ItemListEntryKey, detailMarkers: List<String
     }
     val catalogSource = info.obtain?.withoutSpecializedMethods(recipes)?.takeUnless {
         it.source == SkyBlockObtainSource.STRUCTURED_CATALOG ||
-            isCraftingSourceRepresentedByRecipes(it.summary, recipes)
+            isCraftingSourceRepresentedByRecipes(it.summary, recipes) ||
+            hasAuctionHouseObtainSource(key) && it.summary.equals(AUCTION_HOUSE_SUMMARY, ignoreCase = true)
     }
     if (key.id.startsWith("ENCHANTMENT_")) {
         return structured + listOfNotNull(catalogSource?.toInfoSource())
@@ -374,6 +375,7 @@ private fun wrapTooltipLine(font: Font, text: String, maximumWidth: Int): List<S
 }
 
 private const val TOOLTIP_WIDTH = 220
+private const val AUCTION_HOUSE_SUMMARY = "Traded on the Auction House"
 private val OTHER_OBTAIN_METHOD = Regex(
     """\b(?:obtained\s+(?:as|from|through|via)|purchased\s+(?:at|for|from|through|via)|""" +
         """bought\s+(?:at|for|from)|sold\s+(?:at|by|for|from)|given\s+(?:after|by|for|from|when)|""" +

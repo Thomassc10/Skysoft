@@ -22,6 +22,8 @@ import com.skysoft.utils.gui.OverlayPanelStyle
 import com.skysoft.utils.gui.PixelButtonRenderer
 import com.skysoft.utils.gui.Rect
 import com.skysoft.utils.render.LegacyTextRenderer
+import com.skysoft.utils.renderables.primitives.StringRenderable
+import com.skysoft.utils.renderables.renderAt
 import kotlin.math.min
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
@@ -48,6 +50,7 @@ internal class ItemListViewerScreen(
     private val infoPanel = ItemListInfoPanel()
     private val obtainSourcesPanel = ItemListObtainSourcesPanel()
     private val bazaarPanel = ItemListBazaarPanel()
+    private val auctionHousePanel = ItemListAuctionHousePanel()
     private val fusionSelectorPanel = ItemListFusionSelectorPanel()
     private var layout: ViewerLayout? = null
     private var ingredientBounds: List<Pair<Rect, ItemListEntryKey>> = emptyList()
@@ -59,12 +62,12 @@ internal class ItemListViewerScreen(
 
     override fun init() {
         super.init()
-        SkyBlockPriceData.setItemListBazaarInterest(true)
-        SkyBlockPriceData.refreshBazaarNow()
+        SkyBlockPriceData.setItemListMarketInterest(true)
+        SkyBlockPriceData.refreshItemListMarketNow()
     }
 
     override fun removed() {
-        SkyBlockPriceData.setItemListBazaarInterest(false)
+        SkyBlockPriceData.setItemListMarketInterest(false)
         super.removed()
     }
 
@@ -139,8 +142,8 @@ internal class ItemListViewerScreen(
         }
         return when (event.key()) {
             GLFW.GLFW_KEY_BACKSPACE -> navigateBack().isHandled
-            GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1).isHandled
-            GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1).isHandled
+            GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel).isHandled
+            GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel).isHandled
             GLFW.GLFW_KEY_R -> selection.changeMode(ItemListViewMode.RECIPES).isHandled
             GLFW.GLFW_KEY_U -> selection.changeMode(ItemListViewMode.USAGES).isHandled
             GLFW.GLFW_KEY_A -> {
@@ -180,8 +183,8 @@ internal class ItemListViewerScreen(
         layout.infoTab.contains(mouseX, mouseY) -> selection.changeMode(ItemListViewMode.INFO)
         layout.recipeTab.contains(mouseX, mouseY) -> selection.changeMode(ItemListViewMode.RECIPES)
         layout.usageTab.contains(mouseX, mouseY) -> selection.changeMode(ItemListViewMode.USAGES)
-        layout.previous.contains(mouseX, mouseY) -> selection.changePage(-1, layout.recipeGrid.pageSize)
-        layout.next.contains(mouseX, mouseY) -> selection.changePage(1, layout.recipeGrid.pageSize)
+        layout.previous.contains(mouseX, mouseY) -> selection.changePage(-1, layout.recipeGrid.pageSize, auctionHousePanel)
+        layout.next.contains(mouseX, mouseY) -> selection.changePage(1, layout.recipeGrid.pageSize, auctionHousePanel)
         layout.wikiLinks(minionFamily(currentKey) != null).first.contains(mouseX, mouseY) ->
             openWiki(currentKey, official = true)
         layout.wikiLinks(minionFamily(currentKey) != null).second.contains(mouseX, mouseY) ->
@@ -190,6 +193,13 @@ internal class ItemListViewerScreen(
             val categories = selection.currentCategories().take(MAX_CATEGORY_BUTTONS)
             categories.withIndex().firstOrNull { (index, _) -> layout.category(index).contains(mouseX, mouseY) }
                 ?.value?.let(selection::selectCategory) ?: ViewerInputResult.IGNORED
+        }.orElse {
+            auctionHousePanel.click(
+                mode == ItemListViewMode.RECIPES && selectedSupplemental == ViewerSupplementalCategory.AUCTION_HOUSE,
+                layout.recipeGrid.bounds,
+                mouseX,
+                mouseY,
+            )
         }.orElse {
             if (mode == ItemListViewMode.RECIPES && selectedSupplemental == ViewerSupplementalCategory.BAZAAR) {
                 val click = bazaarPanel.click(layout.recipeGrid.bounds, currentKey, mouseX, mouseY)
@@ -335,6 +345,11 @@ internal class ItemListViewerScreen(
                 bazaarPanel.render(context, font, layout.recipeGrid.bounds, currentKey, mouseX, mouseY)
                 return
             }
+            ViewerSupplementalCategory.AUCTION_HOUSE -> {
+                ingredientBounds = emptyList()
+                auctionHousePanel.render(context, font, layout.recipeGrid.bounds, currentKey, mouseX, mouseY)
+                return
+            }
             null -> Unit
         }
         val allRecipes = selection.currentRecipes()
@@ -366,7 +381,7 @@ internal class ItemListViewerScreen(
             val bounds = crafting.slots[index]
             drawIngredient(context, bounds, ingredient, recipe, mouseX, mouseY)?.let { clickable += bounds to it }
         }
-        LegacyTextRenderer.draw(context, "§7->", crafting.arrow.x, crafting.arrow.y)
+        StringRenderable("§7->", crafting.scale.toDouble()).renderAt(context, crafting.arrow.x, crafting.arrow.y)
         drawIngredient(context, crafting.result, recipe.result, recipe, mouseX, mouseY)
             ?.let { clickable += crafting.result to it }
         if (crafting.progressionRequirement != null && recipe.progressionRequirement != null) {
@@ -413,7 +428,7 @@ internal class ItemListViewerScreen(
             )?.let { clickable += bounds to it }
             if (isSelectable) fusionIngredientTriggers += FusionIngredientTrigger(bounds, target)
         }
-        LegacyTextRenderer.draw(context, "§7->", process.arrow.x, process.arrow.y)
+        StringRenderable("§7->", process.scale.toDouble()).renderAt(context, process.arrow.x, process.arrow.y)
         drawIngredient(context, process.result, recipe.result, recipe, mouseX, mouseY)
             ?.let { clickable += process.result to it }
         renderProcessDetails(context, font, process.details, recipe, petLevels)
@@ -425,32 +440,31 @@ internal class ItemListViewerScreen(
         renderTierFooter(context, font, layout, currentKey, minionFamily, mouseX, mouseY)
         if (mode == ItemListViewMode.INFO) return
         if (fusionSelectorPanel.isOpen) return
+        if (selectedSupplemental == ViewerSupplementalCategory.AUCTION_HOUSE) {
+            layout.renderPageFooter(
+                context,
+                font,
+                mouseX,
+                mouseY,
+                auctionHousePanel.canGoPrevious,
+                auctionHousePanel.canGoNext,
+                auctionHousePanel.pageLabel,
+                minionFamily != null,
+            )
+            return
+        }
         if (selectedSupplemental != null) return
         val recipes = selection.selectedRecipes(selection.currentRecipes())
         val pageCount = recipePageCount(recipes.size, layout.recipeGrid.pageSize)
-        PixelButtonRenderer.draw(
+        layout.renderPageFooter(
             context,
             font,
-            layout.previous,
-            "<",
-            false,
-            layout.previous.contains(mouseX, mouseY),
+            mouseX,
+            mouseY,
             recipePage > 0,
-        )
-        PixelButtonRenderer.draw(
-            context,
-            font,
-            layout.next,
-            ">",
-            false,
-            layout.next.contains(mouseX, mouseY),
             recipePage + 1 < pageCount,
-        )
-        drawViewerCentered(
-            context,
-            font,
-            if (minionFamily == null) layout.recipePage else layout.recipePageWithTiers,
             if (pageCount == 0) "0 / 0" else "${recipePage + 1} / $pageCount",
+            minionFamily != null,
         )
     }
 
@@ -485,20 +499,14 @@ internal class ItemListViewerScreen(
         }
         val stack = if (isSelectable) baseStack?.withActionHint("SELECT") else baseStack
         if (stack != null) {
-            context.item(stack, bounds.x + 1, bounds.y + 1)
+            val decorationText = displayedIngredient.count.takeIf {
+                it > 1 && petLevelKey == null && currencyStack == null
+            }?.let(ItemListFormatting::number)
+            renderViewerItem(context, font, stack, bounds, decorationText)
             when {
                 petLevelKey != null ->
                     petBounds += PetIngredientBounds(bounds, displayedIngredient.id, petLevelKey)
                 currencyStack != null -> drawCurrencyAmount(context, font, bounds, requireNotNull(currencyAmount))
-                displayedIngredient.count > 1 -> {
-                    context.itemDecorations(
-                        font,
-                        stack,
-                        bounds.x + 1,
-                        bounds.y + 1,
-                        ItemListFormatting.number(displayedIngredient.count),
-                    )
-                }
             }
             if (bounds.contains(mouseX, mouseY)) {
                 if (currencyStack != null) {
@@ -858,6 +866,9 @@ private class ViewerSelection(
 
     fun currentCategories(): List<ViewerCategory> = buildList {
         currentRecipes().map(SkyBlockRecipe::type).distinct().forEach { add(ViewerCategory(recipeType = it)) }
+        if (mode == ItemListViewMode.RECIPES && hasAuctionHouseObtainSource(currentKey)) {
+            add(ViewerCategory(supplemental = ViewerSupplementalCategory.AUCTION_HOUSE))
+        }
         if (mode == ItemListViewMode.RECIPES && hasObtainSourcesMatching(currentKey, SPECIALIZED_DETAIL_MARKERS)) {
             add(ViewerCategory(supplemental = ViewerSupplementalCategory.HUNTING))
         }
@@ -897,7 +908,10 @@ private class ViewerSelection(
         return ViewerInputResult.HANDLED
     }
 
-    fun changePage(delta: Int, pageSize: Int): ViewerInputResult {
+    fun changePage(delta: Int, pageSize: Int, auctionHousePanel: ItemListAuctionHousePanel): ViewerInputResult {
+        if (mode == ItemListViewMode.RECIPES && selectedSupplemental == ViewerSupplementalCategory.AUCTION_HOUSE) {
+            return auctionHousePanel.changePage(delta)
+        }
         if (mode == ItemListViewMode.INFO || selectedSupplemental != null) return ViewerInputResult.IGNORED
         val recipes = selectedRecipes(currentRecipes())
         val pageCount = recipePageCount(recipes.size, pageSize)
@@ -942,6 +956,7 @@ private data class ViewerCategory(
 }
 
 private enum class ViewerSupplementalCategory(val label: String) {
+    AUCTION_HOUSE("Auction House"),
     SOURCES("Sources"),
     HUNTING("Hunting"),
     BAZAAR("Bazaar"),
@@ -951,6 +966,7 @@ private fun hasObtainMethods(key: ItemListEntryKey): Boolean =
     SkyBlockDataRepository.recipesFor(key).isNotEmpty() ||
         hasOtherObtainSources(key) ||
         hasObtainSourcesMatching(key, SPECIALIZED_DETAIL_MARKERS) ||
+        hasAuctionHouseObtainSource(key) ||
         hasBazaarObtainSource(key)
 
 private data class PetIngredientBounds(
@@ -1016,6 +1032,42 @@ private data class ViewerLayout(
         officialWikiWithTiers to independentWikiWithTiers
     } else {
         officialWiki to independentWiki
+    }
+
+    fun renderPageFooter(
+        context: GuiGraphicsExtractor,
+        font: net.minecraft.client.gui.Font,
+        mouseX: Int,
+        mouseY: Int,
+        canGoPrevious: Boolean,
+        canGoNext: Boolean,
+        label: String,
+        hasTierNavigation: Boolean,
+    ) {
+        PixelButtonRenderer.draw(
+            context,
+            font,
+            previous,
+            "<",
+            false,
+            previous.contains(mouseX, mouseY),
+            canGoPrevious,
+        )
+        PixelButtonRenderer.draw(
+            context,
+            font,
+            next,
+            ">",
+            false,
+            next.contains(mouseX, mouseY),
+            canGoNext,
+        )
+        drawViewerCentered(
+            context,
+            font,
+            if (hasTierNavigation) recipePageWithTiers else recipePage,
+            label,
+        )
     }
 
     companion object {

@@ -18,6 +18,7 @@ object SkyBlockPriceData {
     private const val BAZAAR_URL = "https://api.findthesoft.com/bazaar"
     private const val BAZAAR_DEPTH_URL = "https://api.findthesoft.com/bazaar-depth"
     private const val LOWEST_BINS_URL = "https://api.findthesoft.com/lowest-bins"
+    private const val AUCTION_HOUSE_URL = "https://api.findthesoft.com/auction-house"
     private const val BAZAAR_REFRESH_INTERVAL_TICKS = 20 * 20
     private const val LOWEST_BINS_REFRESH_INTERVAL_TICKS = 20 * 60 * 2
 
@@ -34,10 +35,14 @@ object SkyBlockPriceData {
     var bazaarStatus = BazaarDataStatus(BazaarDataLoadState.NOT_LOADED)
         private set
 
-    private val hasItemListBazaarInterest = AtomicBoolean(false)
+    private val hasItemListMarketInterest = AtomicBoolean(false)
 
     @Volatile
     private var lowestBins: Map<String, Long> = emptyMap()
+
+    @Volatile
+    var lowestBinsStatus = BazaarDataStatus(BazaarDataLoadState.NOT_LOADED)
+        private set
 
     private var ticksUntilBazaarRefresh = 0
     private var ticksUntilLowestBinsRefresh = 0
@@ -85,15 +90,40 @@ object SkyBlockPriceData {
         itemId,
     )
 
-    fun setItemListBazaarInterest(isActive: Boolean) {
-        hasItemListBazaarInterest.set(isActive)
+    fun setItemListMarketInterest(isActive: Boolean) {
+        hasItemListMarketInterest.set(isActive)
     }
 
     fun getLowestBin(itemId: String): Long? = lowestBins[itemId]
 
+    fun lowestBinAvailability(itemId: String): BazaarProductAvailability = bazaarProductAvailability(
+        lowestBinsStatus.state,
+        lowestBins.keys,
+        itemId,
+    )
+
+    fun refreshAuctionHouse(itemId: String, page: Int): CompletableFuture<SkysoftAuctionHouseResponse> {
+        val item = URLEncoder.encode(itemId, StandardCharsets.UTF_8)
+        return request("$AUCTION_HOUSE_URL?item=$item&page=${page.coerceAtLeast(0)}")
+            .thenApply { gson.fromJson(it, SkysoftAuctionHouseResponse::class.java) }
+            .thenApply { response ->
+                if (!response.success) {
+                    throw IllegalStateException("Skysoft Auction House response failed: ${response.cause}")
+                }
+                response
+            }
+    }
+
     fun refreshBazaarNow() {
         ticksUntilBazaarRefresh = BAZAAR_REFRESH_INTERVAL_TICKS
         refreshBazaar()
+    }
+
+    fun refreshItemListMarketNow() {
+        ticksUntilBazaarRefresh = BAZAAR_REFRESH_INTERVAL_TICKS
+        ticksUntilLowestBinsRefresh = LOWEST_BINS_REFRESH_INTERVAL_TICKS
+        refreshBazaar()
+        refreshLowestBins()
     }
 
     fun refreshBazaarDepth(
@@ -156,6 +186,7 @@ object SkyBlockPriceData {
 
     private fun refreshLowestBins() {
         if (!fetchingLowestBins.compareAndSet(false, true)) return
+        if (lowestBins.isEmpty()) lowestBinsStatus = BazaarDataStatus(BazaarDataLoadState.LOADING)
 
         request(LOWEST_BINS_URL)
             .thenApply { gson.fromJson(it, LowestBinsResponse::class.java) }
@@ -163,13 +194,26 @@ object SkyBlockPriceData {
                 if (!response.success) {
                     throw IllegalStateException("Skysoft lowest BIN response failed: ${response.cause}")
                 }
-                response.prices
+                response
             }
-            .whenComplete { prices, error ->
-                if (error == null && prices != null) {
-                    lowestBins = prices
+            .whenComplete { response, error ->
+                if (error == null && response != null) {
+                    lowestBins = response.prices
+                    lowestBinsStatus = BazaarDataStatus(BazaarDataLoadState.READY, response.fetchedAt)
                 } else {
                     SkysoftMod.LOGGER.warn("Failed to refresh lowest BIN prices", error)
+                    lowestBinsStatus = if (lowestBins.isEmpty()) {
+                        BazaarDataStatus(
+                            BazaarDataLoadState.FAILED,
+                            message = error?.message ?: "Lowest BIN request failed",
+                        )
+                    } else {
+                        BazaarDataStatus(
+                            BazaarDataLoadState.READY,
+                            lowestBinsStatus.updatedAtMillis,
+                            error?.message ?: "Lowest BIN refresh failed",
+                        )
+                    }
                 }
                 fetchingLowestBins.set(false)
             }
@@ -181,7 +225,7 @@ object SkyBlockPriceData {
         val inventoryConfig = SkysoftConfigGui.config().inventory
         return shouldRefreshBazaarData(
             isInSkyBlock = HypixelLocationState.inSkyBlock,
-            hasItemListInterest = hasItemListBazaarInterest.get(),
+            hasItemListInterest = hasItemListMarketInterest.get(),
             arePriceTooltipsEnabled = inventoryConfig.priceTooltips.enabled,
             isRareLootSharingEnabled = isRareLootSharingEnabled(),
             isBazaarTrackerEnabled = inventoryConfig.bazaar.enabled,
@@ -189,9 +233,12 @@ object SkyBlockPriceData {
         )
     }
 
-    private fun shouldRefreshLowestBins(): Boolean =
-        HypixelLocationState.inSkyBlock &&
-            (SkysoftConfigGui.config().inventory.priceTooltips.enabled || isRareLootSharingEnabled())
+    private fun shouldRefreshLowestBins(): Boolean = shouldRefreshLowestBinData(
+        isInSkyBlock = HypixelLocationState.inSkyBlock,
+        hasItemListInterest = hasItemListMarketInterest.get(),
+        arePriceTooltipsEnabled = SkysoftConfigGui.config().inventory.priceTooltips.enabled,
+        isRareLootSharingEnabled = isRareLootSharingEnabled(),
+    )
 
     private fun isRareLootSharingEnabled(): Boolean =
         SkysoftConfigGui.config().misc.rareLootSharing.enabled
@@ -252,6 +299,13 @@ internal fun shouldRefreshBazaarData(
         isRareLootSharingEnabled ||
         isBazaarTrackerEnabled && hasActiveOrders
     )
+
+internal fun shouldRefreshLowestBinData(
+    isInSkyBlock: Boolean,
+    hasItemListInterest: Boolean,
+    arePriceTooltipsEnabled: Boolean,
+    isRareLootSharingEnabled: Boolean,
+): Boolean = isInSkyBlock && (hasItemListInterest || arePriceTooltipsEnabled || isRareLootSharingEnabled)
 
 private data class BazaarProducts(
     val products: Map<String, SkysoftBazaarProduct> = emptyMap(),

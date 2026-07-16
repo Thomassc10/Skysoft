@@ -6,9 +6,15 @@ import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.config.core.HudPosition
 import com.skysoft.mixin.AbstractContainerScreenAccessor
 import com.skysoft.utils.gui.Rect
+import com.skysoft.utils.renderables.primitives.ItemIconRenderable
+import com.skysoft.utils.renderables.renderAt
+import com.skysoft.utils.renderables.withIsolatedPose
 import kotlin.math.min
 import kotlin.math.roundToInt
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.world.item.ItemStack
 
 internal data class ItemListLayout(
     val panel: Rect,
@@ -213,3 +219,32 @@ private data class FooterBounds(
     val search: Rect,
     val config: Rect?,
 )
+
+internal fun renderViewerItem(
+    context: GuiGraphicsExtractor,
+    font: Font,
+    stack: ItemStack,
+    bounds: Rect,
+    decorationText: String? = null,
+) {
+    val scale = minOf(
+        (bounds.width - VIEWER_ITEM_PADDING * 2).toFloat() / VIEWER_ITEM_SIZE,
+        (bounds.height - VIEWER_ITEM_PADDING * 2).toFloat() / VIEWER_ITEM_SIZE,
+        MAX_VIEWER_CONTENT_SCALE,
+    ).coerceAtLeast(1f)
+    val size = (VIEWER_ITEM_SIZE * scale).roundToInt()
+    val x = bounds.x + (bounds.width - size) / 2
+    val y = bounds.y + (bounds.height - size) / 2
+    ItemIconRenderable(stack, scale.toDouble()).renderAt(context, x, y)
+    if (decorationText != null) {
+        context.withIsolatedPose {
+            pose().translate(x.toFloat(), y.toFloat())
+            pose().scale(scale, scale)
+            itemDecorations(font, stack, 0, 0, decorationText)
+        }
+    }
+}
+
+private const val VIEWER_ITEM_SIZE = 16
+private const val VIEWER_ITEM_PADDING = 1
+internal const val MAX_VIEWER_CONTENT_SCALE = 1.5f

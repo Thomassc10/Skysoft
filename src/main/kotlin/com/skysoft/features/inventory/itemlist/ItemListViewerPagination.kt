@@ -3,6 +3,7 @@ package com.skysoft.features.inventory.itemlist
 import com.skysoft.data.skyblock.ItemListEntryKey
 import com.skysoft.data.skyblock.SkyBlockItemInfo
 import com.skysoft.utils.gui.Rect
+import kotlin.math.roundToInt
 
 internal data class ViewerRecipeGrid(
     val bounds: Rect,
@@ -49,48 +50,67 @@ internal data class ViewerCraftingLayout(
     val arrow: Rect,
     val result: Rect,
     val progressionRequirement: Rect?,
+    val scale: Float,
 ) {
     companion object {
         fun create(tile: Rect, hasProgressionRequirement: Boolean = false): ViewerCraftingLayout {
-            val contentWidth = GRID_SIZE + ITEM_GAP + ARROW_WIDTH + ITEM_GAP + SLOT_SIZE
-            val gridX = tile.x + (tile.width - contentWidth) / 2
-            val contentHeight = GRID_SIZE + if (hasProgressionRequirement) {
+            val baseContentHeight = GRID_SIZE + if (hasProgressionRequirement) {
                 PROGRESSION_GAP + PROGRESSION_HEIGHT
+            } else {
+                0
+            }
+            val baseContentWidth = maxOf(
+                GRID_SIZE + ITEM_GAP + ARROW_WIDTH + ITEM_GAP + SLOT_SIZE,
+                if (hasProgressionRequirement) PROGRESSION_WIDTH else 0,
+            )
+            val scale = viewerContentScale(tile, baseContentWidth, baseContentHeight)
+            val slotSize = scaled(SLOT_SIZE, scale)
+            val gridSize = CRAFTING_GRID_WIDTH * slotSize
+            val itemGap = scaled(ITEM_GAP, scale)
+            val arrowWidth = scaled(ARROW_WIDTH, scale)
+            val arrowHeight = scaled(ARROW_HEIGHT, scale)
+            val progressionGap = scaled(PROGRESSION_GAP, scale)
+            val progressionHeight = scaled(PROGRESSION_HEIGHT, scale)
+            val progressionWidth = scaled(PROGRESSION_WIDTH, scale)
+            val contentWidth = gridSize + itemGap + arrowWidth + itemGap + slotSize
+            val gridX = tile.x + (tile.width - contentWidth) / 2
+            val contentHeight = gridSize + if (hasProgressionRequirement) {
+                progressionGap + progressionHeight
             } else {
                 0
             }
             val gridY = tile.y + (tile.height - contentHeight) / 2
             val slots = List(CRAFTING_SLOT_COUNT) { index ->
                 Rect(
-                    gridX + index % CRAFTING_GRID_WIDTH * SLOT_SIZE,
-                    gridY + index / CRAFTING_GRID_WIDTH * SLOT_SIZE,
-                    SLOT_SIZE,
-                    SLOT_SIZE,
+                    gridX + index % CRAFTING_GRID_WIDTH * slotSize,
+                    gridY + index / CRAFTING_GRID_WIDTH * slotSize,
+                    slotSize,
+                    slotSize,
                 )
             }
             val arrow = Rect(
-                gridX + GRID_SIZE + ITEM_GAP,
-                gridY + GRID_SIZE / 2 - ARROW_HEIGHT / 2,
-                ARROW_WIDTH,
-                ARROW_HEIGHT,
+                gridX + gridSize + itemGap,
+                gridY + gridSize / 2 - arrowHeight / 2,
+                arrowWidth,
+                arrowHeight,
             )
             val result = Rect(
-                arrow.x + arrow.width + ITEM_GAP,
-                gridY + GRID_SIZE / 2 - SLOT_SIZE / 2,
-                SLOT_SIZE,
-                SLOT_SIZE,
+                arrow.x + arrow.width + itemGap,
+                gridY + gridSize / 2 - slotSize / 2,
+                slotSize,
+                slotSize,
             )
             val progressionRequirement = if (hasProgressionRequirement) {
                 Rect(
-                    gridX - (PROGRESSION_WIDTH - GRID_SIZE) / 2,
-                    gridY + GRID_SIZE + PROGRESSION_GAP,
-                    PROGRESSION_WIDTH,
-                    PROGRESSION_HEIGHT,
+                    gridX - (progressionWidth - gridSize) / 2,
+                    gridY + gridSize + progressionGap,
+                    progressionWidth,
+                    progressionHeight,
                 )
             } else {
                 null
             }
-            return ViewerCraftingLayout(slots, arrow, result, progressionRequirement)
+            return ViewerCraftingLayout(slots, arrow, result, progressionRequirement, scale)
         }
 
         private const val CRAFTING_GRID_WIDTH = 3
@@ -112,43 +132,60 @@ internal data class ViewerProcessLayout(
     val arrow: Rect,
     val result: Rect,
     val details: Rect,
+    val scale: Float,
 ) {
     companion object {
         fun create(tile: Rect, ingredientCount: Int, hasSource: Boolean = false): ViewerProcessLayout {
             val count = ingredientCount.coerceIn(0, MAX_INGREDIENTS)
-            val itemAreaY = tile.y + ITEM_TOP
             val ingredientColumns = count.coerceAtMost(MAX_INGREDIENT_COLUMNS).coerceAtLeast(1)
             val ingredientRows = (count + MAX_INGREDIENT_COLUMNS - 1) / MAX_INGREDIENT_COLUMNS
-            val ingredientY = itemAreaY + (ITEM_AREA_HEIGHT - ingredientRows * SLOT_SIZE) / 2
-            val ingredientWidth = ingredientColumns * SLOT_SIZE
-            val sourceWidth = if (hasSource) SLOT_SIZE + SOURCE_GAP else 0
-            val totalWidth = sourceWidth + ingredientWidth + ITEM_GAP + ARROW_WIDTH + ITEM_GAP + SLOT_SIZE
+            val baseIngredientWidth = ingredientColumns * SLOT_SIZE
+            val baseSourceWidth = if (hasSource) SLOT_SIZE + SOURCE_GAP else 0
+            val baseTotalWidth = baseSourceWidth + baseIngredientWidth + ITEM_GAP + ARROW_WIDTH + ITEM_GAP + SLOT_SIZE
+            val baseTotalHeight = ITEM_TOP + ITEM_AREA_HEIGHT + DETAIL_GAP + DETAIL_HEIGHT
+            val scale = viewerContentScale(tile, baseTotalWidth, baseTotalHeight)
+            val slotSize = scaled(SLOT_SIZE, scale)
+            val itemTop = scaled(ITEM_TOP, scale)
+            val itemAreaHeight = scaled(ITEM_AREA_HEIGHT, scale)
+            val itemGap = scaled(ITEM_GAP, scale)
+            val sourceGap = scaled(SOURCE_GAP, scale)
+            val arrowWidth = scaled(ARROW_WIDTH, scale)
+            val arrowHeight = scaled(ARROW_HEIGHT, scale)
+            val detailInset = scaled(DETAIL_INSET, scale)
+            val detailGap = scaled(DETAIL_GAP, scale)
+            val detailHeight = scaled(DETAIL_HEIGHT, scale)
+            val itemAreaY = tile.y + itemTop
+            val itemCenterY = itemAreaY + itemAreaHeight / 2
+            val ingredientY = itemCenterY - ingredientRows * slotSize / 2
+            val ingredientWidth = ingredientColumns * slotSize
+            val sourceWidth = if (hasSource) slotSize + sourceGap else 0
+            val totalWidth = sourceWidth + ingredientWidth + itemGap + arrowWidth + itemGap + slotSize
             val startX = tile.x + (tile.width - totalWidth) / 2
             val source = if (hasSource) {
-                Rect(startX, itemAreaY + ITEM_AREA_HEIGHT / 2 - SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE)
+                Rect(startX, itemCenterY - slotSize / 2, slotSize, slotSize)
             } else {
                 null
             }
             val ingredientX = startX + sourceWidth
             val slots = List(count) { index ->
                 Rect(
-                    ingredientX + index % MAX_INGREDIENT_COLUMNS * SLOT_SIZE,
-                    ingredientY + index / MAX_INGREDIENT_COLUMNS * SLOT_SIZE,
-                    SLOT_SIZE,
-                    SLOT_SIZE,
+                    ingredientX + index % MAX_INGREDIENT_COLUMNS * slotSize,
+                    ingredientY + index / MAX_INGREDIENT_COLUMNS * slotSize,
+                    slotSize,
+                    slotSize,
                 )
             }
             val arrow = Rect(
-                ingredientX + ingredientWidth + ITEM_GAP,
-                itemAreaY + ITEM_AREA_HEIGHT / 2 - ARROW_HEIGHT / 2,
-                ARROW_WIDTH,
-                ARROW_HEIGHT,
+                ingredientX + ingredientWidth + itemGap,
+                itemCenterY - arrowHeight / 2,
+                arrowWidth,
+                arrowHeight,
             )
             val result = Rect(
-                arrow.x + arrow.width + ITEM_GAP,
-                itemAreaY + ITEM_AREA_HEIGHT / 2 - SLOT_SIZE / 2,
-                SLOT_SIZE,
-                SLOT_SIZE,
+                arrow.x + arrow.width + itemGap,
+                itemCenterY - slotSize / 2,
+                slotSize,
+                slotSize,
             )
             return ViewerProcessLayout(
                 source = source,
@@ -156,11 +193,12 @@ internal data class ViewerProcessLayout(
                 arrow = arrow,
                 result = result,
                 details = Rect(
-                    tile.x + DETAIL_INSET,
-                    itemAreaY + ITEM_AREA_HEIGHT + DETAIL_GAP,
-                    tile.width - DETAIL_INSET * 2,
-                    DETAIL_HEIGHT,
+                    tile.x + detailInset,
+                    itemAreaY + itemAreaHeight + detailGap,
+                    tile.width - detailInset * 2,
+                    detailHeight,
                 ),
+                scale = scale,
             )
         }
 
@@ -178,6 +216,14 @@ internal data class ViewerProcessLayout(
         private const val DETAIL_HEIGHT = 36
     }
 }
+
+private fun viewerContentScale(tile: Rect, baseWidth: Int, baseHeight: Int): Float = minOf(
+    MAX_VIEWER_CONTENT_SCALE,
+    tile.width.toFloat() / baseWidth,
+    tile.height.toFloat() / baseHeight,
+).coerceAtLeast(1f)
+
+private fun scaled(value: Int, scale: Float): Int = (value * scale).roundToInt().coerceAtLeast(1)
 
 internal fun recipePageCount(recipeCount: Int, pageSize: Int): Int =
     if (recipeCount == 0) 0 else (recipeCount + pageSize - 1) / pageSize

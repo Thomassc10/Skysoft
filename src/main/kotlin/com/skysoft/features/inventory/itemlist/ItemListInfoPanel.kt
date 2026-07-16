@@ -264,7 +264,7 @@ internal fun renderEntityIcon(
     val entity = SkyBlockDataRepository.entity(entityId)
     val stack = com.skysoft.data.skyblock.SkyBlockEntityStacks.stack(entityId)
     if (stack != null) {
-        context.item(stack, bounds.x + 1, bounds.y + 1)
+        renderViewerItem(context, font, stack, bounds)
     } else {
         context.text(
             font,
