@@ -112,9 +112,10 @@ object PetRepository {
         variantIndex: Int? = null,
         firstFrameOnly: Boolean = false,
         animationSpeed: Float = 1f,
+        displayIconTexture: String? = null,
     ): List<PetItemFrame>? {
         if (skinInternalName == null) return null
-        val animation = PetSkins.animated(skinInternalName, variantIndex)
+        val animation = PetSkins.animated(skinInternalName, variantIndex, displayIconTexture)
             ?: return getSkinStackOrNull(skinInternalName, variantIndex)?.let { listOf(PetItemFrame(it)) }
         val ticks = if (firstFrameOnly || animationSpeed <= 0f) {
             1

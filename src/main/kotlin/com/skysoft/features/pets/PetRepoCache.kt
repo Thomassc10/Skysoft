@@ -24,6 +24,8 @@ internal object PetRepoCache {
     val itemStacks = ConcurrentHashMap<String, ItemStack>()
     val itemNames = ConcurrentHashMap<String, String>()
     val skinStacks = ConcurrentHashMap<String, ItemStack>()
+    val animatedSkinMatches = ConcurrentHashMap<String, AnimatedSkinJson>()
+    val missingAnimatedSkinMatches = ConcurrentHashMap.newKeySet<String>()
 
     @Volatile
     var localRepoCacheLoaded = false
@@ -45,6 +47,11 @@ internal object PetRepoCache {
 
     @Volatile
     var animatedSkullsJson: SkysoftAnimatedSkullsRepoJson? = null
+        set(value) {
+            animatedSkinMatches.clear()
+            missingAnimatedSkinMatches.clear()
+            field = value
+        }
 
     @Volatile
     var petSkinInternalNames: Set<String>? = null

@@ -79,7 +79,13 @@ data class StoredPetData(
             ?: PetRepository.itemStackOrNull(requiredPetInternalName)
 
     fun getAnimatedItemStackSequence(firstFrameOnly: Boolean = false, animationSpeed: Float = 1f): List<PetItemFrame>? =
-        PetRepository.getAnimatedSkinFrames(skinInternalName, skinVariantIndex, firstFrameOnly, animationSpeed)
+        PetRepository.getAnimatedSkinFrames(
+            skinInternalName,
+            skinVariantIndex,
+            firstFrameOnly,
+            animationSpeed,
+            displayIconTexture,
+        )
             ?: getItemStackOrNull()?.let { listOf(PetItemFrame(it)) }
 
     private fun displayIconStackOrNull(): ItemStack? {

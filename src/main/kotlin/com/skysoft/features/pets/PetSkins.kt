@@ -7,13 +7,36 @@ internal object PetSkins {
     fun animatedTexture(skinInternalName: String, variantIndex: Int?): String? =
         animated(skinInternalName, variantIndex)?.textures?.firstOrNull()
 
-    fun animated(skinInternalName: String, variantIndex: Int?): AnimatedSkinJson? {
+    fun animated(skinInternalName: String, variantIndex: Int?, displayIconTexture: String? = null): AnimatedSkinJson? {
         val animated = PetRepoCache.animatedSkullsJson ?: return null
         if (variantIndex != null && variantIndex >= 0) {
             val variant = animated.petSkinVariants[skinInternalName]?.getOrNull(variantIndex)
             if (variant != null) return animated.skins[variant]
         }
+        displayIconTexture?.let { animationMatchingTexture(animated, skinInternalName, it) }?.let { return it }
         return animated.skins[skinInternalName]
+    }
+
+    private fun animationMatchingTexture(
+        animated: SkysoftAnimatedSkullsRepoJson,
+        skinInternalName: String,
+        displayIconTexture: String,
+    ): AnimatedSkinJson? {
+        val texture = displayIconTexture.substringAfter(':')
+        val cacheKey = "$skinInternalName:$texture"
+        PetRepoCache.animatedSkinMatches[cacheKey]?.let { return it }
+        if (!PetRepoCache.missingAnimatedSkinMatches.add(cacheKey)) return null
+        val match = animated.skins.asSequence()
+            .filter { (internalName) ->
+                internalName == skinInternalName || internalName.startsWith("${skinInternalName}_")
+            }
+            .map { it.value }
+            .firstOrNull { animation ->
+                animation.textures.any { it.substringAfter(':') == texture }
+            } ?: return null
+        PetRepoCache.missingAnimatedSkinMatches.remove(cacheKey)
+        PetRepoCache.animatedSkinMatches[cacheKey] = match
+        return match
     }
 
     fun isSkinForPet(internalName: String, properName: String): Boolean {
