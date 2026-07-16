@@ -633,8 +633,10 @@ object ItemListController {
 
     private fun changePage(delta: Int, layout: ItemListLayout) {
         val count = pageCount(lastEntries.size, layout.pageSize)
-        ItemListState.page = (ItemListState.page + delta).coerceIn(0, count - 1)
-        SoundUtilities.playClickSound()
+        val nextPage = (ItemListState.page + delta).coerceIn(0, count - 1)
+        if (nextPage == ItemListState.page) return
+        ItemListState.page = nextPage
+        SoundUtilities.playPageSound(delta)
     }
 
     private fun openViewer(

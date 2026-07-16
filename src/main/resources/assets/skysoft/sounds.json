@@ -1,0 +1,12 @@
+{
+  "item_list.page_left": {
+    "sounds": [
+      "minecraft:entity/painting/break2"
+    ]
+  },
+  "item_list.page_right": {
+    "sounds": [
+      "minecraft:entity/painting/break3"
+    ]
+  }
+}

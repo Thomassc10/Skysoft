@@ -11,11 +11,20 @@ import net.minecraft.util.RandomSource
 
 object SoundUtilities {
     private val clickSound by lazy { createSound("ui.button.click", 1f) }
+    private val previousPageSound by lazy { createSound("skysoft:item_list.page_left", 1f, 1f) }
+    private val nextPageSound by lazy { createSound("skysoft:item_list.page_right", 1f, 1f) }
     private val itemProtectedSound by lazy { createSound("entity.ender_eye.death", 1f, 1f, 4096L) }
     private val itemUnprotectedSound by lazy { createSound("entity.ender_eye.death", 1f, 1f, 0L) }
 
     fun playClickSound() {
         playSound(clickSound)
+    }
+
+    fun playPageSound(delta: Int) {
+        when {
+            delta < 0 -> playSound(previousPageSound)
+            delta > 0 -> playSound(nextPageSound)
+        }
     }
 
     fun playItemProtectedSound() {
@@ -27,7 +36,7 @@ object SoundUtilities {
     }
 
     private fun createSound(name: String, pitch: Float, volume: Float = 50f, seed: Long? = null): SoundInstance {
-        val identifier = Identifier.parse(name.replace(Regex("[^a-z0-9/._-]"), ""))
+        val identifier = Identifier.parse(name.replace(Regex("[^a-z0-9/:._-]"), ""))
         if (seed == null) return SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(identifier), pitch, volume)
         return SimpleSoundInstance(
             identifier,

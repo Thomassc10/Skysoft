@@ -18,7 +18,6 @@ import com.skysoft.data.skyblock.price.SkyBlockPriceData
 import com.skysoft.gui.tooltip.SkysoftNativeTooltip
 import com.skysoft.utils.BrowserUtilities
 import com.skysoft.utils.MinecraftClient
-import com.skysoft.utils.SoundUtilities
 import com.skysoft.utils.gui.OverlayPanelStyle
 import com.skysoft.utils.gui.PixelButtonRenderer
 import com.skysoft.utils.gui.Rect
@@ -118,7 +117,7 @@ internal class ItemListViewerScreen(
             else -> ViewerInputResult.IGNORED
         }
         if (!result.isHandled) return super.mouseClicked(click, doubled)
-        SoundUtilities.playClickSound()
+        result.playSound()
         return true
     }
 
@@ -152,8 +151,12 @@ internal class ItemListViewerScreen(
         }
         return when (event.key()) {
             GLFW.GLFW_KEY_BACKSPACE -> navigateBack().isHandled
-            GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel).isHandled
-            GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel).isHandled
+            GLFW.GLFW_KEY_LEFT -> selection.changePage(-1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel)
+                .also(ViewerInputResult::playSound)
+                .isHandled
+            GLFW.GLFW_KEY_RIGHT -> selection.changePage(1, layout?.recipeGrid?.pageSize ?: 1, auctionHousePanel)
+                .also(ViewerInputResult::playSound)
+                .isHandled
             GLFW.GLFW_KEY_A -> {
                 ItemListState.toggleFavorite(currentKey)
                 true
@@ -945,7 +948,7 @@ private class ViewerSelection(
         val nextPage = (recipePage + delta).coerceIn(0, (pageCount - 1).coerceAtLeast(0))
         if (nextPage == recipePage) return ViewerInputResult.IGNORED
         recipePage = nextPage
-        return ViewerInputResult.HANDLED
+        return ViewerInputResult.page(delta)
     }
 
     fun open(key: ItemListEntryKey) {

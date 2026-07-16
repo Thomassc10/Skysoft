@@ -123,11 +123,11 @@ internal class ItemListObtainSourcesPanel {
         return when {
             layout.previous.contains(mouseX, mouseY) && huntingPage > 0 -> {
                 huntingPage--
-                ViewerInputResult.HANDLED
+                ViewerInputResult.PREVIOUS_PAGE
             }
             layout.next.contains(mouseX, mouseY) && huntingPage + 1 < layout.pageCount -> {
                 huntingPage++
-                ViewerInputResult.HANDLED
+                ViewerInputResult.NEXT_PAGE
             }
             else -> ViewerInputResult.IGNORED
         }

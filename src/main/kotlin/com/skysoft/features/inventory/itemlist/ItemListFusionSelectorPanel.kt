@@ -109,11 +109,11 @@ internal class ItemListFusionSelectorPanel {
             return when {
                 dropdown.tierBounds[PREVIOUS_CELL].contains(mouseX, mouseY) && page > 0 -> {
                     page--
-                    ViewerInputResult.HANDLED
+                    ViewerInputResult.PREVIOUS_PAGE
                 }
                 dropdown.tierBounds[NEXT_CELL].contains(mouseX, mouseY) && page + 1 < currentPage.pageCount -> {
                     page++
-                    ViewerInputResult.HANDLED
+                    ViewerInputResult.NEXT_PAGE
                 }
                 clickedTrigger != null -> {
                     open(clickedTrigger)
