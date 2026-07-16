@@ -57,6 +57,7 @@ internal class ItemListViewerScreen(
     private var layout: ViewerLayout? = null
     private var ingredientBounds: List<Pair<Rect, ItemListEntryKey>> = emptyList()
     private var progressionBounds: List<Pair<Rect, SkyBlockProgressionRequirement>> = emptyList()
+    private var quickCraftBounds: List<Pair<Rect, String>> = emptyList()
     private var entityBounds: List<Pair<Rect, String>> = emptyList()
     private var petBounds: List<PetIngredientBounds> = emptyList()
     private var fusionIngredientTriggers: List<FusionIngredientTrigger> = emptyList()
@@ -92,6 +93,8 @@ internal class ItemListViewerScreen(
             ItemListViewMode.INFO -> {
                 ingredientBounds = emptyList()
                 progressionBounds = emptyList()
+                quickCraftBounds = emptyList()
+                visibleItemListQuickCraftButtons = 0
                 entityBounds = emptyList()
                 petBounds = emptyList()
                 fusionIngredientTriggers = emptyList()
@@ -227,7 +230,7 @@ internal class ItemListViewerScreen(
             if (npcAction.shouldCloseScreen) MinecraftClient.setScreen(null)
             npcAction.inputResult
         }.orElse {
-            navigateIngredient(mouseX, mouseY)
+            navigateIngredient(mouseX, mouseY, canQuickCraft = true)
         }
     }
 
@@ -302,6 +305,8 @@ internal class ItemListViewerScreen(
 
     private fun renderRecipes(context: GuiGraphicsExtractor, layout: ViewerLayout, mouseX: Int, mouseY: Int) {
         progressionBounds = emptyList()
+        quickCraftBounds = emptyList()
+        visibleItemListQuickCraftButtons = 0
         entityBounds = emptyList()
         petBounds = emptyList()
         fusionIngredientTriggers = emptyList()
@@ -389,6 +394,14 @@ internal class ItemListViewerScreen(
         StringRenderable("§7->", crafting.scale.toDouble()).renderAt(context, crafting.arrow.x, crafting.arrow.y)
         drawIngredient(context, crafting.result, recipe.result, recipe, mouseX, mouseY)
             ?.let { clickable += crafting.result to it }
+        itemListQuickCraftCommand(recipe.result.id)?.let { command ->
+            val button = itemListQuickCraftButtonBounds(crafting.result)
+            quickCraftBounds += button to command
+            visibleItemListQuickCraftButtons = quickCraftBounds.size
+            val isHovered = button.contains(mouseX, mouseY)
+            PixelButtonRenderer.draw(context, font, button, "+", false, isHovered, true)
+            if (isHovered) SkysoftNativeTooltip.setForNextFrame(context, listOf("§eQuick Craft"), mouseX, mouseY)
+        }
         if (crafting.progressionRequirement != null && recipe.progressionRequirement != null) {
             progressionBounds += renderProgressionRequirement(
                 context,
@@ -547,7 +560,18 @@ internal class ItemListViewerScreen(
         return ViewerInputResult.HANDLED
     }
 
-    private fun navigateIngredient(mouseX: Int, mouseY: Int): ViewerInputResult {
+    private fun navigateIngredient(mouseX: Int, mouseY: Int, canQuickCraft: Boolean = false): ViewerInputResult {
+        val quickCraftCommand = quickCraftBounds.firstOrNull { it.first.contains(mouseX, mouseY) }?.second
+        if (canQuickCraft && quickCraftCommand != null) {
+            val connection = Minecraft.getInstance().connection
+            if (connection == null) {
+                lastItemListQuickCraftOutcome = "$quickCraftCommand rejected:no-connection"
+                return ViewerInputResult.IGNORED
+            }
+            connection.sendCommand(quickCraftCommand)
+            lastItemListQuickCraftOutcome = "$quickCraftCommand sent"
+            return ViewerInputResult.HANDLED
+        }
         val key = ingredientBounds.firstOrNull { it.first.contains(mouseX, mouseY) }?.second
             ?: return ViewerInputResult.IGNORED
         return navigateTo(key)
