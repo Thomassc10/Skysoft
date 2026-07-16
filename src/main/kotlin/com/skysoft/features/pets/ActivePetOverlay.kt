@@ -127,7 +127,11 @@ object ActivePetOverlay {
 
     private fun renderHud(context: GuiGraphicsExtractor) {
         val minecraft = Minecraft.getInstance()
-        if (MinecraftClient.isGuiHidden(minecraft) || !SkysoftConfigGui.config().misc.pets.petDisplay.enabled.get()) return
+        if (
+            MinecraftClient.isGuiHidden(minecraft) ||
+            !SkysoftConfigGui.config().misc.pets.petDisplay.enabled.get() ||
+            config.general.hideInMenus.get() && MinecraftClient.screen(minecraft) is AbstractContainerScreen<*>
+        ) return
         context.nextStratum()
         val renderable = buildDisplayRenderable(displayState)
         renderable?.also {

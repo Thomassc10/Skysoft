@@ -39,6 +39,12 @@ class PetOverlayConfig : Config() {
         val enabled: Property<Boolean> = Property.of(true)
 
         @JvmField
+        @field:Expose
+        @field:ConfigOption(name = "Hide in menus", desc = "Hide Pet Display while a container menu is open.")
+        @field:ConfigEditorBoolean
+        val hideInMenus: Property<Boolean> = Property.of(false)
+
+        @JvmField
         @field:ConfigOption(
             name = "§cXP Accuracy",
             desc = "Pet Display requires the Pet display in Hypixel's /widget menu. " +
