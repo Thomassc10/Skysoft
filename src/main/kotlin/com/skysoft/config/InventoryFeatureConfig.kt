@@ -175,6 +175,12 @@ class ItemListSettingsConfig {
 
     @JvmField
     @field:Expose
+    @field:ConfigOption(name = "Tab Search", desc = "Focus the Item List search bar by pressing Tab.")
+    @field:ConfigEditorBoolean
+    var isTabSearchEnabled = true
+
+    @JvmField
+    @field:Expose
     @field:ConfigOption(name = "Info Key", desc = "Open the hovered item's Item List Info tab.")
     @field:ConfigEditorKeybind(defaultKey = GLFW.GLFW_KEY_I)
     var infoKey = GLFW.GLFW_KEY_I

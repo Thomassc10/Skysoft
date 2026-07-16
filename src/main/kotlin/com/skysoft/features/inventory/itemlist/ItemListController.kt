@@ -460,6 +460,10 @@ object ItemListController {
             searchField.focused = false
             return InputHandlingResult.CONSUMED
         }
+        if (isItemListVisible && event.key() == GLFW.GLFW_KEY_TAB && config.settings.isTabSearchEnabled) {
+            searchField.focused = true
+            return InputHandlingResult.CONSUMED
+        }
         val shortcut = resolveItemListShortcut(event.key(), config, screen, hoveredKey.takeIf { isItemListVisible })
         val layout = lastLayout
         return when {
