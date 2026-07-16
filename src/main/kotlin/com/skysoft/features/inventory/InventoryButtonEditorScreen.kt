@@ -6,6 +6,7 @@ import com.skysoft.config.SkysoftConfigGui
 import com.skysoft.features.inventory.InventoryButtonManager.BUTTON_SIZE
 import com.skysoft.features.inventory.InventoryButtonManager.IconCandidate
 import com.skysoft.gui.scale.InventoryScaledScreen
+import com.skysoft.gui.tooltip.SkysoftNativeTooltip
 import com.skysoft.utils.MinecraftClient
 import com.skysoft.utils.SoundUtilities
 import com.skysoft.utils.gui.PixelButtonRenderer
@@ -54,6 +55,10 @@ object InventoryButtonEditorScreen {
         internal var lastResetBounds: Rect? = null
         internal var lastClearBounds: Rect? = null
         internal var lastDoneBounds: Rect? = null
+        internal var hoveredIndex: Int? = null
+        private var grabbedIndex: Int? = null
+        private var grabbedOffsetX = 0
+        private var grabbedOffsetY = 0
 
         override fun extractRenderState(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
             context.fill(0, 0, width, height, EditorColors.SCREEN_OVERLAY)
@@ -65,6 +70,7 @@ object InventoryButtonEditorScreen {
             val mouseX = click.x().toInt()
             val mouseY = click.y().toInt()
             if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return super.mouseClicked(click, doubled)
+            grabbedIndex = null
 
             val previewMouseX = EditorRenderer.previewMouseX(this, mouseX)
             val previewMouseY = EditorRenderer.previewMouseY(this, mouseY)
@@ -101,6 +107,9 @@ object InventoryButtonEditorScreen {
                     true
                 }
                 placement != null -> {
+                    grabbedIndex = placement.index
+                    grabbedOffsetX = previewMouseX - placement.bounds.x
+                    grabbedOffsetY = previewMouseY - placement.bounds.y
                     selectedIndex = placement.index
                     syncFieldsFromSelection()
                     true
@@ -112,6 +121,21 @@ object InventoryButtonEditorScreen {
                     true
                 }
             }
+        }
+
+        override fun mouseDragged(click: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
+            if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return super.mouseDragged(click, dragX, dragY)
+            val button = grabbedIndex?.let(config.buttons::getOrNull)
+                ?: return super.mouseDragged(click, dragX, dragY)
+            InventoryButtonCanvas(
+                Rect(0, 0, InventoryPreview.WIDTH, InventoryPreview.HEIGHT),
+                playerInventory = true,
+            ).move(
+                button,
+                EditorRenderer.previewMouseX(this, click.x().toInt()) - grabbedOffsetX,
+                EditorRenderer.previewMouseY(this, click.y().toInt()) - grabbedOffsetY,
+            )
+            return true
         }
 
         override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
@@ -136,7 +160,11 @@ object InventoryButtonEditorScreen {
                     true
                 }
                 iconField.focused && handleIconFieldKey(event) == InputHandlingResult.CONSUMED -> true
-                isClearSelectedButtonKey(event) &&
+                event.key() == GLFW.GLFW_KEY_R -> (hoveredIndex ?: selectedIndex)?.let { index ->
+                    InventoryButtonManager.resetButtonPosition(index)
+                    true
+                } ?: super.keyPressed(event)
+                (event.key() == GLFW.GLFW_KEY_DELETE || event.key() == GLFW.GLFW_KEY_BACKSPACE) &&
                     clearSelectedButtonIfPresent() == InputHandlingResult.CONSUMED -> true
                 else -> super.keyPressed(event)
             }
@@ -160,9 +188,6 @@ object InventoryButtonEditorScreen {
             resultScrollRow = 0
             return InputHandlingResult.CONSUMED
         }
-
-        private fun isClearSelectedButtonKey(event: KeyEvent): Boolean =
-            event.key() == GLFW.GLFW_KEY_DELETE || event.key() == GLFW.GLFW_KEY_BACKSPACE
 
         private fun clearSelectedButtonIfPresent(): InputHandlingResult {
             val button = selectedButton() ?: return InputHandlingResult.IGNORED
@@ -500,7 +525,6 @@ object InventoryButtonEditorScreen {
             tooltipMouseX: Int,
             tooltipMouseY: Int,
         ) {
-            val font = Minecraft.getInstance().font
             val placements = InventoryButtonManager.placements(
                 left = left,
                 top = top,
@@ -509,8 +533,10 @@ object InventoryButtonEditorScreen {
                 playerInventory = true,
                 includeInactive = true,
             )
+            val hoveredPlacement = placements.lastOrNull { it.bounds.contains(mouseX, mouseY) }
+            screen.hoveredIndex = hoveredPlacement?.index
             for (placement in placements) {
-                val hovered = placement.bounds.contains(mouseX, mouseY)
+                val hovered = placement == hoveredPlacement
                 InventoryButtonManager.drawButton(
                     context = context,
                     x = placement.bounds.x,
@@ -521,12 +547,22 @@ object InventoryButtonEditorScreen {
                     selected = placement.index == screen.selectedIndex,
                 )
                 if (hovered) {
-                    val line = if (placement.button.isActive()) {
-                        InventoryButtonManager.displayCommand(placement.button.command)
-                    } else {
-                        "Click to create a button"
-                    }
-                    context.setTooltipForNextFrame(font, Component.literal(line), tooltipMouseX, tooltipMouseY)
+                    val action = if (placement.button.isActive()) "edit" else "create a button"
+                    SkysoftNativeTooltip.setForNextFrame(
+                        context,
+                        listOf(
+                            if (placement.button.isActive()) {
+                                "§7Command: §e${InventoryButtonManager.displayCommand(placement.button.command)}"
+                            } else {
+                                "§7Empty button slot"
+                            },
+                            "§eLeft-click §7to $action",
+                            "§eLeft-click drag §7to move",
+                            "§eR §7to reset",
+                        ),
+                        tooltipMouseX,
+                        tooltipMouseY,
+                    )
                 }
             }
         }
