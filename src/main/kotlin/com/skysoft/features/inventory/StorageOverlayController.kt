@@ -137,6 +137,13 @@ internal enum class ToolkitType(
 
     fun shortcutTitle(isAvailable: Boolean): String = if (isAvailable) title else "Locked $title"
 
+    fun shortcutTooltip(): List<String> = listOf(
+        "§a$title",
+        "§7Store all of your ${title.removeSuffix(" Toolkit")} Tools in one convenient place.",
+        "",
+        "§eClick to open the $title!",
+    )
+
     companion object {
         fun fromTitle(title: String): ToolkitType? = entries.firstOrNull { it.title == title }
 

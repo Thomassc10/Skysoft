@@ -1,6 +1,7 @@
 package com.skysoft.features.inventory
 
 import com.skysoft.data.ProfileStorage
+import com.skysoft.gui.tooltip.SkysoftNativeTooltip
 import com.skysoft.utils.gui.Rect
 import com.skysoft.utils.gui.itemWithDecorations
 import com.skysoft.utils.render.LegacyTextRenderer
@@ -305,7 +306,11 @@ internal fun drawStorageSelectorPanel(
             hoveredToolkit != null -> toolkitShortcutStack(hoveredToolkit)
             else -> ItemStack.EMPTY
         }
-        if (!stack.isEmpty) context.setTooltipForNextFrame(Minecraft.getInstance().font, stack, mouseX, mouseY)
+        if (hoveredToolkit != null) {
+            SkysoftNativeTooltip.setForNextFrame(context, hoveredToolkit.shortcutTooltip(), mouseX, mouseY)
+        } else if (!stack.isEmpty) {
+            context.setTooltipForNextFrame(Minecraft.getInstance().font, stack, mouseX, mouseY)
+        }
     }
 }
 
