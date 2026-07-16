@@ -21,7 +21,6 @@ internal object StoragePages {
 internal object StoragePanel {
     const val PADDING = 10
     const val EDGE_MARGIN = 4
-    const val MIN_HEIGHT = 96
     const val VERTICAL_RESERVED_SPACE = 48
     const val TOP_MIN = 8
 }

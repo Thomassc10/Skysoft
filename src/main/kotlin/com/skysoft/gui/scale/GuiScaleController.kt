@@ -3,6 +3,7 @@ package com.skysoft.gui.scale
 import com.mojang.blaze3d.platform.Window
 import com.skysoft.config.InventoryScreenConfig
 import com.skysoft.config.SkysoftConfigGui
+import com.skysoft.features.inventory.StorageOverlayController
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -59,7 +60,8 @@ class GuiScaleController private constructor() {
 
         @JvmStatic
         fun usesSeparateInventoryScale(screen: Screen?): Boolean =
-            config().separateInventoryGuiScale && supportsInventoryScale(screen)
+            supportsInventoryScale(screen) &&
+                (config().separateInventoryGuiScale || shouldCapStorageOverlayScale(screen))
 
         @JvmStatic
         fun usesSeparateTooltipScale(screen: Screen?): Boolean =
@@ -67,11 +69,17 @@ class GuiScaleController private constructor() {
 
         @JvmStatic
         fun resolve(screen: Screen?, window: Window): ResolvedScales {
+            val config = config()
             val normal = resolve(window, minecraft.options.guiScale().get())
-            val tooltip = resolve(window, config().settings.tooltipGuiScale)
-            val inventory = minOf(
-                resolve(window, config().settings.inventoryGuiScale),
-                inventoryScaleLimit(screen),
+            val tooltip = resolve(window, config.settings.tooltipGuiScale)
+            val configuredInventory = if (config.separateInventoryGuiScale) {
+                resolve(window, config.settings.inventoryGuiScale)
+            } else {
+                normal
+            }
+            val inventory = capStorageOverlayScale(
+                minOf(configuredInventory, inventoryScaleLimit(screen)),
+                StorageOverlayController.isActive(screen as? AbstractContainerScreen<*>),
             )
             return ResolvedScales(normal, inventory.coerceAtLeast(1), tooltip)
         }
@@ -139,6 +147,19 @@ class GuiScaleController private constructor() {
                 Int.MAX_VALUE
             }
 
+        private fun shouldCapStorageOverlayScale(screen: Screen?): Boolean {
+            val normalScale = resolve(minecraft.window, minecraft.options.guiScale().get())
+            return capStorageOverlayScale(
+                normalScale,
+                StorageOverlayController.isActive(screen as? AbstractContainerScreen<*>),
+            ) != normalScale
+        }
+
         private fun config(): InventoryScreenConfig = SkysoftConfigGui.config().gui.inventoryScreen
     }
 }
+
+internal fun capStorageOverlayScale(scale: Int, isStorageOverlayActive: Boolean): Int =
+    if (isStorageOverlayActive) minOf(scale, STORAGE_OVERLAY_MAX_GUI_SCALE) else scale
+
+private const val STORAGE_OVERLAY_MAX_GUI_SCALE = 4

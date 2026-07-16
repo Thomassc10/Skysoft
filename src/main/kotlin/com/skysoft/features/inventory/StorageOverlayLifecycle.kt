@@ -106,6 +106,15 @@ internal fun renderOverlay(screen: ContainerScreen, context: GuiGraphicsExtracto
     val measurements = layoutState.measurements
     val activePage = handle.entryIndex()
     val pageLayoutResult = layoutState.pageLayoutResult
+    val isPointerOverSettings = storageSettingsContains(
+        screen.width,
+        screen.height,
+        measurements,
+        mouseX,
+        mouseY,
+    )
+    val contentMouseX = if (isPointerOverSettings) StorageRuntime.OFFSCREEN else mouseX
+    val contentMouseY = if (isPointerOverSettings) StorageRuntime.OFFSCREEN else mouseY
 
     drawStoragePanel(context, measurements)
     drawPages(
@@ -114,13 +123,16 @@ internal fun renderOverlay(screen: ContainerScreen, context: GuiGraphicsExtracto
         measurements,
         pageLayoutResult.pages,
         handle.takeIf { it.gridRows() != null },
-        mouseX,
-        mouseY,
+        contentMouseX,
+        contentMouseY,
     )
     drawScrollBar(context, measurements, pageLayoutResult.contentHeight)
     drawSearchBox(context, measurements)
-    drawPlayerInventoryPanel(context, screen, measurements, mouseX, mouseY)
-    if (config.settings.miniMenu) drawStorageSelectorPanel(context, measurements, activePage, mouseX, mouseY)
+    drawPlayerInventoryPanel(context, screen, measurements, contentMouseX, contentMouseY)
+    if (config.settings.miniMenu) {
+        drawStorageSelectorPanel(context, measurements, activePage, contentMouseX, contentMouseY)
+    }
+    drawStorageSettingsPanel(context, screen.width, screen.height, measurements, mouseX, mouseY)
     coerceScroll(measurements, pageLayoutResult.contentHeight)
 }
 
@@ -134,6 +146,9 @@ internal fun handlePreScreenMouseClick(
     val layoutState = storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
     val mouseX = click.x().toInt()
     val mouseY = click.y().toInt()
+    if (processStorageSettingsClick(screen, click, layoutState.measurements) == InputHandlingResult.CONSUMED) {
+        return InputHandlingResult.CONSUMED
+    }
     updateSearchFocusFromClick(layoutState.measurements, mouseX, mouseY)
 
     if (routeActivePageSlotClick(screen, layoutState.handle, click) == InputHandlingResult.CONSUMED) {
@@ -155,6 +170,9 @@ internal fun handleStorageOverlayMouseClick(
     val pageLayoutResult = layoutState.pageLayoutResult
     val mouseX = click.x().toInt()
     val mouseY = click.y().toInt()
+    if (processStorageSettingsClick(screen, click, measurements) == InputHandlingResult.CONSUMED) {
+        return InputHandlingResult.CONSUMED
+    }
     updateSearchFocusFromClick(measurements, mouseX, mouseY)
 
     return when {
@@ -302,6 +320,9 @@ internal fun handleStorageOverlayMouseScroll(
     if (scrollY == 0.0) return InputHandlingResult.IGNORED
     val layoutState = storageOverlayLayoutScreen(screen) ?: return InputHandlingResult.IGNORED
     val measurements = layoutState.measurements
+    if (storageSettingsContains(screen.width, screen.height, measurements, mouseX.toInt(), mouseY.toInt())) {
+        return InputHandlingResult.CONSUMED
+    }
     if (!measurements.scrollPanel.contains(mouseX.toInt(), mouseY.toInt())) return InputHandlingResult.IGNORED
     moveStorageScrollTarget(
         -(scrollY * config.details.scrollSpeed),
@@ -312,6 +333,7 @@ internal fun handleStorageOverlayMouseScroll(
 
 internal fun handleStorageOverlayKeyPress(screen: AbstractContainerScreen<*>, event: KeyEvent): InputHandlingResult {
     if (!storageOverlayIsActive(screen)) return InputHandlingResult.IGNORED
+    if (processStorageSettingsKey(event.key()) == InputHandlingResult.CONSUMED) return InputHandlingResult.CONSUMED
     if (editingTitlePage != null) return handleTitleEditKeyPress(screen, event)
     if (!searchFocused) return InputHandlingResult.IGNORED
     when (event.key()) {
@@ -363,5 +385,6 @@ internal fun isStorageOverlayClickInside(
     val measurements = measurements(screen.width, screen.height)
     return measurements.totalBounds.contains(mouseX.toInt(), mouseY.toInt()) ||
         measurements.playerBounds.contains(mouseX.toInt(), mouseY.toInt()) ||
-        (config.settings.miniMenu && measurements.selectorBounds.contains(mouseX.toInt(), mouseY.toInt()))
+        (config.settings.miniMenu && measurements.selectorBounds.contains(mouseX.toInt(), mouseY.toInt())) ||
+        storageSettingsContains(screen.width, screen.height, measurements, mouseX.toInt(), mouseY.toInt())
 }

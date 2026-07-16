@@ -41,6 +41,7 @@ internal fun resetScreenState() {
     lastInventoryKey = null
     redirectedOverviewScreenId = null
     centeredPageKey = null
+    resetStorageSettingsPanel()
 }
 
 internal fun resetTransientState() {

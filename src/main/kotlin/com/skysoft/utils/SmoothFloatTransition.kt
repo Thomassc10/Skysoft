@@ -18,6 +18,12 @@ class SmoothFloatTransition(
         return currentValue(nowNanos)
     }
 
+    fun snap(value: Float) {
+        startValue = value
+        targetValue = value
+        startedAt = 0L
+    }
+
     private fun currentValue(nowNanos: Long): Float {
         if (startValue == targetValue || startedAt == 0L) return targetValue
         val progress = ((nowNanos - startedAt).toDouble() / durationNanos).coerceIn(0.0, 1.0)

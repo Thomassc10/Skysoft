@@ -1,5 +1,6 @@
 package com.skysoft.features.inventory
 
+import com.skysoft.config.StorageOverlayConfigBounds
 import com.skysoft.data.ProfileStorage
 import com.skysoft.utils.gui.Point
 import com.skysoft.utils.gui.Rect
@@ -12,29 +13,22 @@ import net.minecraft.world.level.block.Blocks
 
 internal fun measurements(width: Int, height: Int): Measurements {
     val columns = config.details.columns.coerceIn(
-        1,
-        maxOf(1, (width - StoragePanel.PADDING * 2) / (StoragePages.WIDTH + StoragePages.PADDING)),
+        StorageOverlayConfigBounds.MIN_COLUMNS,
+        maximumStorageColumns(width),
     )
     val scrollPanelWidth = columns * StoragePages.WIDTH + (columns - 1) * StoragePages.PADDING
     val storageWidth = scrollPanelWidth + StorageScrollbar.GAP + StorageScrollbar.WIDTH + StoragePanel.PADDING * 2
     val storageX = (width - storageWidth) / 2
     val playerX = width / 2 - StoragePlayerInventory.WIDTH / 2
-    val sideSelectorX = StorageSelectorLayout.sideX(storageX, playerX)
+    val sideSelectorX = StorageSelectorLayout.sideX(playerX)
     val stackedSelectorHeight = if (config.settings.miniMenu && sideSelectorX == null) {
         StorageSelector.HEIGHT + StorageSelector.STACKED_GAP
     } else {
         0
     }
     val storageHeight = config.details.height.coerceIn(
-        StoragePanel.MIN_HEIGHT,
-        maxOf(
-            StoragePanel.MIN_HEIGHT,
-            height -
-                StoragePlayerInventory.HEIGHT -
-                StorageSearch.HEIGHT -
-                StoragePanel.VERTICAL_RESERVED_SPACE -
-                stackedSelectorHeight,
-        ),
+        StorageOverlayConfigBounds.MIN_HEIGHT,
+        maximumStorageHeight(height, stackedSelectorHeight),
     )
     val availableHeight = height -
         storageHeight -
@@ -88,10 +82,9 @@ internal fun measurements(width: Int, height: Int): Measurements {
 }
 
 internal object StorageSelectorLayout {
-    fun sideX(storageX: Int, playerX: Int): Int? = storageX.takeIf {
-        it >= StoragePanel.EDGE_MARGIN &&
-            it + StorageSelector.WIDTH + StorageSelector.SIDE_GAP <= playerX
-    }
+    fun sideX(playerX: Int): Int? =
+        (playerX - StorageSelector.SIDE_GAP - StorageSelector.WIDTH)
+            .takeIf { it >= StoragePanel.EDGE_MARGIN }
 
     fun bounds(screenWidth: Int, sideX: Int?, playerY: Int): Rect {
         val x = sideX ?: ((screenWidth - StorageSelector.WIDTH) / 2).coerceAtLeast(StoragePanel.EDGE_MARGIN)

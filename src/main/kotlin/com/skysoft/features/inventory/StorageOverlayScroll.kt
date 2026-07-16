@@ -60,6 +60,9 @@ internal fun handleStorageOverlayMouseDrag(
     screen: AbstractContainerScreen<*>,
     click: MouseButtonEvent,
 ): InputHandlingResult {
+    if (processStorageSettingsDrag(screen, click) == InputHandlingResult.CONSUMED) {
+        return InputHandlingResult.CONSUMED
+    }
     val dragOffset = scrollbarDragOffset ?: return InputHandlingResult.IGNORED
     if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return InputHandlingResult.IGNORED
     val layoutState = storageOverlayLayoutScreen(screen) ?: run {
@@ -79,6 +82,9 @@ internal fun handleStorageOverlayMouseDrag(
 }
 
 internal fun handleStorageOverlayMouseRelease(click: MouseButtonEvent): InputHandlingResult {
+    if (processStorageSettingsRelease(click) == InputHandlingResult.CONSUMED) {
+        return InputHandlingResult.CONSUMED
+    }
     if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT || scrollbarDragOffset == null) {
         return InputHandlingResult.IGNORED
     }
@@ -91,13 +97,13 @@ internal fun shouldPreferStorageOverlayMouseScroll(
     mouseX: Double,
     mouseY: Double,
     scrollY: Double,
-): Boolean = shouldPreferStorageOverlayMouseScroll(
-    storageOverlayIsActive(screen),
-    measurements(screen.width, screen.height).scrollPanel,
-    mouseX,
-    mouseY,
-    scrollY,
-)
+): Boolean {
+    val isActive = storageOverlayIsActive(screen)
+    if (!isActive || scrollY == 0.0) return false
+    val measurements = measurements(screen.width, screen.height)
+    return measurements.scrollPanel.contains(mouseX.toInt(), mouseY.toInt()) ||
+        storageSettingsContains(screen.width, screen.height, measurements, mouseX.toInt(), mouseY.toInt())
+}
 
 internal fun shouldPreferStorageOverlayMouseScroll(
     isActive: Boolean,

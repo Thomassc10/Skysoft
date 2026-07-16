@@ -811,22 +811,24 @@ class StorageOverlayConfig {
 
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Settings", desc = "Storage overlay settings.")
-    @field:Accordion
     val settings = StorageOverlaySettingsConfig()
 
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Details", desc = "Storage overlay layout settings.")
-    @field:Accordion
     val details = StorageOverlayDetailsConfig()
 
     fun repairLoadedValues() {
-        details.columns = details.columns.coerceIn(MIN_STORAGE_COLUMNS, MAX_STORAGE_COLUMNS)
-        details.height = details.height.coerceIn(MIN_STORAGE_HEIGHT, MAX_STORAGE_HEIGHT)
+        details.columns = details.columns.coerceIn(
+            StorageOverlayConfigBounds.MIN_COLUMNS,
+            StorageOverlayConfigBounds.MAX_COLUMNS,
+        )
+        details.height = details.height.coerceIn(
+            StorageOverlayConfigBounds.MIN_HEIGHT,
+            StorageOverlayConfigBounds.MAX_HEIGHT,
+        )
         details.scrollSpeed = details.scrollSpeed.coerceIn(
-            MIN_STORAGE_SCROLL_SPEED,
-            MAX_STORAGE_SCROLL_SPEED,
+            StorageOverlayConfigBounds.MIN_SCROLL_SPEED,
+            StorageOverlayConfigBounds.MAX_SCROLL_SPEED,
         )
     }
 }
@@ -834,35 +836,35 @@ class StorageOverlayConfig {
 class StorageOverlaySettingsConfig {
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Shortcut", desc = "Show the storage overview shortcut next to the player inventory.")
-    @field:ConfigEditorBoolean
     var miniMenu = true
 }
 
 class StorageOverlayDetailsConfig {
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Dim Background", desc = "Dim the world behind the storage overlay.")
-    @field:ConfigEditorBoolean
     var dimBackground = true
 
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Columns", desc = "Storage pages shown per row.")
-    @field:ConfigEditorSlider(minValue = 1f, maxValue = 5f, minStep = 1f)
     var columns = 3
 
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Height", desc = "Height of the scrollable storage page area.")
-    @field:ConfigEditorSlider(minValue = 96f, maxValue = 360f, minStep = 18f)
     var height = 234
 
     @JvmField
     @field:Expose
-    @field:ConfigOption(name = "Scroll Speed", desc = "Rows scrolled per mouse-wheel step.")
-    @field:ConfigEditorSlider(minValue = 1f, maxValue = 40f, minStep = 1f)
     var scrollSpeed = 18
+}
+
+internal object StorageOverlayConfigBounds {
+    const val MIN_COLUMNS = 1
+    const val MAX_COLUMNS = 5
+    const val MIN_HEIGHT = 96
+    const val MAX_HEIGHT = 360
+    const val HEIGHT_STEP = 18
+    const val MIN_SCROLL_SPEED = 1
+    const val MAX_SCROLL_SPEED = 40
 }
 
 class PriceTooltipsConfig {
@@ -1021,11 +1023,5 @@ const val DEFAULT_SMOOTH_SWAPPING_SPEED = 125
 const val DEFAULT_SMOOTH_SWAPPING_DURATION = 180
 private const val MIN_BUTTON_BACKGROUND_INDEX = 0
 private const val MAX_BUTTON_BACKGROUND_INDEX = 6
-private const val MIN_STORAGE_COLUMNS = 1
-private const val MAX_STORAGE_COLUMNS = 5
-private const val MIN_STORAGE_HEIGHT = 96
-private const val MAX_STORAGE_HEIGHT = 360
-private const val MIN_STORAGE_SCROLL_SPEED = 1
-private const val MAX_STORAGE_SCROLL_SPEED = 40
 private const val MIN_BAZAAR_TRACKER_ORDERS = 1
 private const val MAX_BAZAAR_TRACKER_ORDERS = 20
